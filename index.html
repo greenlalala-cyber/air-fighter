@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>NEON VANGUARD — Vertical Shooter</title>
+  <title>AIR FIGHTER</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -12,14 +12,14 @@
       <div class="brand">
         <div class="dot"></div>
         <div class="title">
-          <div class="name" id="brandName">NEON VANGUARD</div>
+          <div class="name" id="brandName">AIR FIGHTER</div>
           <div class="sub" id="brandSub">3 scenes • upgrades • bosses</div>
         </div>
       </div>
 
-      <!-- HUD order optimized for mobile 2-line layout:
+      <!-- Mobile 2-row HUD (3 columns):
            Row1: Scene / Lives / HP
-           Row2: Weapon / EN-TC / ?  -->
+           Row2: Weapon / Lang / ? -->
       <div class="hud">
         <div class="hudItem">
           <span class="k" id="lblScene">Scene</span>
@@ -41,10 +41,7 @@
           <span id="hudWeapon" class="v">Basic</span>
         </div>
 
-        <!-- Language toggle -->
-        <button id="btnLang" class="hudBtn hudLang" type="button" aria-label="Language">EN</button>
-
-        <!-- Help button -->
+        <button id="btnLang" class="hudBtn hudLang" type="button" aria-label="Language toggle">EN</button>
         <button id="btnHelp" class="hudBtn" type="button" aria-label="Help">?</button>
 
         <!-- Hidden on mobile (keeps HUD exactly 2 rows) -->
@@ -69,7 +66,7 @@
 
         <div id="overlay" class="overlay">
           <div class="panel">
-            <div class="panelTitle" id="overlayTitle">NEON VANGUARD</div>
+            <div class="panelTitle" id="overlayTitle">AIR FIGHTER</div>
             <div class="panelText" id="overlayText"></div>
 
             <div class="panelBtns">
