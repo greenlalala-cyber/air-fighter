@@ -23,38 +23,74 @@ body{
 
 .topbar{
   display:flex;
-  gap:12px;
+  gap:10px;
   align-items:center;
   justify-content:space-between;
-  padding:12px 14px;
+  padding:10px 12px;
   border-bottom:1px solid rgba(0,0,0,.10);
   background: rgba(255,255,255,.55);
   backdrop-filter: blur(10px);
   position:sticky;
   top:0;
   z-index:10;
+  max-width: 100vw;
 }
 
-.brand{ display:flex; align-items:center; gap:10px; min-width:180px; }
+.brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width: 0;              /* IMPORTANT: allow shrink on iPhone */
+  flex: 0 1 auto;            /* allow shrink */
+}
 .dot{
   width:10px;height:10px;border-radius:999px;
   background: linear-gradient(135deg, var(--accent), var(--accent2));
   box-shadow: 0 0 16px rgba(47,91,255,.25);
+  flex: 0 0 auto;
 }
-.title .name{ font-weight:900; letter-spacing:.08em; font-size:12px; }
-.title .sub{ font-size:12px; color:rgba(0,0,0,.55); margin-top:2px; }
+.title{ min-width:0; }
+.title .name{
+  font-weight:950;
+  letter-spacing:.08em;
+  font-size:12px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width: 42vw;           /* prevents pushing HUD off-screen */
+}
+.title .sub{
+  font-size:12px;
+  color:rgba(0,0,0,.55);
+  margin-top:2px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width: 42vw;
+}
 
-.hud{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; align-items:center; }
+.hud{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  align-items:center;
+  min-width: 0;
+  max-width: 58vw;           /* prevents overflow on Safari */
+}
 
 .hudItem{
-  display:flex; gap:8px; align-items:center;
+  display:flex;
+  gap:8px;
+  align-items:center;
   padding:7px 10px;
   border:1px solid rgba(0,0,0,.12);
   border-radius:999px;
   background: rgba(255,255,255,.62);
+  min-width: 0;
 }
-.hudItem .k{ font-size:12px; color:rgba(0,0,0,.55); }
-.hudItem .v{ font-size:12px; font-weight:800; }
+.hudItem .k{ font-size:12px; color:rgba(0,0,0,.55); white-space:nowrap; }
+.hudItem .v{ font-size:12px; font-weight:800; white-space:nowrap; }
 
 .hudBtn{
   height: 34px;
@@ -70,11 +106,11 @@ body{
   justify-content:center;
   line-height:1;
   user-select:none;
+  flex: 0 0 auto;
 }
 .hudBtn:hover{ background: rgba(255,255,255,.88); }
 .hudBtn:active{ transform: translateY(1px); }
 
-/* Language pill slightly wider */
 .hudLang{
   min-width: 44px;
   letter-spacing: .06em;
@@ -227,67 +263,53 @@ canvas{ width:100%; height:100%; display:block; }
   color:rgba(0,0,0,.55);
 }
 
-/* Desktop layout */
 @media (min-width: 900px){
   .stage{ flex-direction:row; align-items:flex-start; justify-content:center; gap:16px; }
   .canvasWrap{ height:min(74vh, 740px); width:min(56vw, 520px); }
-
   .mobileControls{
     width: 260px;
     flex-direction:column;
     align-items:stretch;
     justify-content:flex-start;
   }
-
-  .actionsMid{
-    display:flex;
-    flex-direction:column;
-    gap:10px;
-  }
-
+  .actionsMid{ display:flex; flex-direction:column; gap:10px; }
   .btn.action{ width:100%; }
 }
 
-/* Mobile: HUD 2 lines only + controls FIRE left, focus/pause middle, joystick right */
+/* Mobile: HUD is exactly 2 rows, 3 columns, no overflow */
 @media (max-width: 520px){
-  .topbar{
-    padding: 6px 10px;
-    gap: 8px;
-  }
-  .title .name{ font-size: 11px; }
+  .topbar{ padding: 6px 10px; gap: 8px; align-items:flex-start; }
+  .title .name{ font-size: 11px; max-width: 40vw; }
   .title .sub{ display:none; }
 
-  /* 2 rows exactly: 3 columns */
   .hud{
     display:grid;
-    grid-template-columns: repeat(3, max-content);
-    grid-auto-rows: auto;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 6px 8px;
     justify-content: end;
-    align-content: center;
+    align-content: start;
+    max-width: 60vw;
   }
 
   .hudItem{
+    width: 100%;
     padding: 5px 8px;
     gap: 6px;
+    justify-content: space-between;
   }
-  .hudItem .k,
-  .hudItem .v{ font-size: 11px; }
+  .hudItem .k, .hudItem .v{ font-size: 11px; }
 
   .hideMobile{ display:none !important; }
 
-  /* Place row2: Weapon / Lang / ? */
-  /* With current HTML order, this already happens naturally:
-     Row1: Scene Lives HP
-     Row2: Weapon Lang ? */
-
   .hudBtn{
+    width: 100%;
     height: 28px;
-    min-width: 28px;
+    min-width: 0;
     padding: 0 10px;
     font-size: 12px;
+    justify-content: center;
   }
-  .hudLang{ min-width: 40px; }
+  .hudLang{ letter-spacing: .06em; }
 
   .canvasWrap{ height: min(62vh, 640px); }
 
