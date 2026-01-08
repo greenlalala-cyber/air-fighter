@@ -1,17 +1,14 @@
 :root{
-  --line:rgba(255,255,255,.16);
   --text:rgba(10,20,40,.92);
   --muted:rgba(10,20,40,.62);
   --accent:#2F5BFF;
   --accent2:#22D3EE;
-  --good:#16A34A;
-  --warn:#F59E0B;
-  --bad:#EF4444;
   --shadow: 0 18px 50px rgba(0,0,0,.22);
 }
 
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
+
 body{
   margin:0;
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
@@ -47,7 +44,8 @@ body{
 .title .name{ font-weight:900; letter-spacing:.08em; font-size:12px; }
 .title .sub{ font-size:12px; color:rgba(0,0,0,.55); margin-top:2px; }
 
-.hud{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+.hud{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; align-items:center; }
+
 .hudItem{
   display:flex; gap:8px; align-items:center;
   padding:7px 10px;
@@ -57,6 +55,23 @@ body{
 }
 .hudItem .k{ font-size:12px; color:rgba(0,0,0,.55); }
 .hudItem .v{ font-size:12px; font-weight:800; }
+
+.hudBtn{
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border:1px solid rgba(0,0,0,.12);
+  background: rgba(255,255,255,.70);
+  font-weight: 950;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  line-height:1;
+  user-select:none;
+}
+.hudBtn:hover{ background: rgba(255,255,255,.88); }
+.hudBtn:active{ transform: translateY(1px); }
 
 .stage{
   flex:1;
@@ -78,7 +93,6 @@ body{
   background: rgba(255,255,255,.50);
   box-shadow: var(--shadow);
 }
-
 canvas{ width:100%; height:100%; display:block; }
 
 .overlay{
@@ -206,7 +220,7 @@ canvas{ width:100%; height:100%; display:block; }
   color:rgba(0,0,0,.55);
 }
 
-/* Desktop layout (unchanged behavior) */
+/* Desktop layout */
 @media (min-width: 900px){
   .stage{ flex-direction:row; align-items:flex-start; justify-content:center; gap:16px; }
   .canvasWrap{ height:min(74vh, 740px); width:min(56vw, 520px); }
@@ -218,7 +232,6 @@ canvas{ width:100%; height:100%; display:block; }
     justify-content:flex-start;
   }
 
-  /* On desktop, keep actions stacked */
   .actionsMid{
     display:flex;
     flex-direction:column;
@@ -228,23 +241,15 @@ canvas{ width:100%; height:100%; display:block; }
   .btn.action{ width:100%; }
 }
 
-/* ==========================================
-   Mobile: EXACT layout per your reference pic
-   - HUD: 2 lines only
-   - Controls: FIRE left (big), Focus/Pause middle, joystick right
-   ========================================== */
+/* Mobile: HUD 2 lines only + controls FIRE left, focus/pause middle, joystick right */
 @media (max-width: 520px){
-
-  /* Make the top info area smaller */
   .topbar{
     padding: 6px 10px;
     gap: 8px;
   }
-
   .title .name{ font-size: 11px; }
   .title .sub{ display:none; }
 
-  /* HUD becomes a 2-row grid (2 columns) */
   .hud{
     display:grid;
     grid-template-columns: repeat(2, max-content);
@@ -258,21 +263,14 @@ canvas{ width:100%; height:100%; display:block; }
     padding: 5px 8px;
     gap: 6px;
   }
-
   .hudItem .k,
-  .hudItem .v{
-    font-size: 11px;
-  }
+  .hudItem .v{ font-size: 11px; }
 
-  /* Hide extra HUD chips so it's always 2 lines */
   .hideMobile{ display:none !important; }
+  .hudBtn{ width: 28px; height: 28px; }
 
-  /* Canvas sizing: keep comfortable */
-  .canvasWrap{
-    height: min(62vh, 640px);
-  }
+  .canvasWrap{ height: min(62vh, 640px); }
 
-  /* Controls as 3-column grid: FIRE | actions | pad */
   .mobileControls{
     width:min(92vw, 460px);
     display:grid;
@@ -282,7 +280,6 @@ canvas{ width:100%; height:100%; display:block; }
     align-items:center;
   }
 
-  /* FIRE left big */
   #btnFire{
     grid-area: fire;
     width: 100%;
@@ -291,7 +288,6 @@ canvas{ width:100%; height:100%; display:block; }
     border-radius: 18px;
   }
 
-  /* Focus/Pause middle stacked */
   .actionsMid{
     grid-area: mid;
     display:flex;
@@ -306,7 +302,6 @@ canvas{ width:100%; height:100%; display:block; }
     border-radius: 14px;
   }
 
-  /* Joystick right */
   .pad{
     grid-area: pad;
     width: 120px;
