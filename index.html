@@ -1,311 +1,95 @@
-:root{
-  --text:rgba(10,20,40,.92);
-  --muted:rgba(10,20,40,.62);
-  --accent:#2F5BFF;
-  --accent2:#22D3EE;
-  --shadow: 0 18px 50px rgba(0,0,0,.22);
-}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NEON VANGUARD — Vertical Shooter</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="dot"></div>
+        <div class="title">
+          <div class="name">NEON VANGUARD</div>
+          <div class="sub">3 scenes • upgrades • bosses</div>
+        </div>
+      </div>
 
-*{ box-sizing:border-box; }
-html,body{ height:100%; }
+      <!-- HUD order optimized for mobile 2-line layout -->
+      <div class="hud">
+        <div class="hudItem"><span class="k">Scene</span><span id="hudScene" class="v">1</span></div>
+        <div class="hudItem"><span class="k">Lives</span><span id="hudLives" class="v">3</span></div>
+        <div class="hudItem"><span class="k">HP</span><span id="hudHP" class="v">10/10</span></div>
+        <div class="hudItem"><span class="k">Weapon</span><span id="hudWeapon" class="v">Basic</span></div>
 
-body{
-  margin:0;
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-  color:var(--text);
-  background:
-    radial-gradient(1200px 900px at 25% 10%, rgba(34,211,238,.28), transparent 58%),
-    radial-gradient(1100px 900px at 80% 20%, rgba(47,91,255,.18), transparent 60%),
-    linear-gradient(180deg, #DDF3FF, #BFE6FF);
-}
+        <!-- Hidden on mobile (HUD stays 2 lines) -->
+        <div class="hudItem hideMobile"><span class="k">Fire</span><span id="hudFire" class="v">I</span></div>
+        <div class="hudItem hideMobile"><span class="k">Luck</span><span id="hudLuck" class="v">x1.00</span></div>
+        <div class="hudItem hideMobile"><span class="k">SFX</span><span id="hudSfx" class="v">ON</span></div>
 
-.app{ min-height:100%; display:flex; flex-direction:column; }
+        <!-- Help button -->
+        <button id="btnHelp" class="hudBtn" type="button" aria-label="Help">?</button>
+      </div>
+    </header>
 
-.topbar{
-  display:flex;
-  gap:12px;
-  align-items:center;
-  justify-content:space-between;
-  padding:12px 14px;
-  border-bottom:1px solid rgba(0,0,0,.10);
-  background: rgba(255,255,255,.55);
-  backdrop-filter: blur(10px);
-  position:sticky;
-  top:0;
-  z-index:10;
-}
+    <main class="stage">
+      <div class="canvasWrap">
+        <canvas id="game" width="420" height="700" aria-label="Shooter Game Canvas"></canvas>
 
-.brand{ display:flex; align-items:center; gap:10px; min-width:180px; }
-.dot{
-  width:10px;height:10px;border-radius:999px;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  box-shadow: 0 0 16px rgba(47,91,255,.25);
-}
-.title .name{ font-weight:900; letter-spacing:.08em; font-size:12px; }
-.title .sub{ font-size:12px; color:rgba(0,0,0,.55); margin-top:2px; }
+        <div id="overlay" class="overlay">
+          <div class="panel">
+            <div class="panelTitle" id="overlayTitle">NEON VANGUARD</div>
+            <div class="panelText" id="overlayText">
+              Move: <b>WASD / Arrow Keys</b><br/>
+              Shoot: <b>Space</b> (auto-fire) • Focus: <b>Shift</b> • Pause: <b>P</b> / <b>Esc</b><br/><br/>
+              <b>Items:</b> ▲ Weapon • ✚ Potion • ⚡ Fire Rate • ✦ Life Up (rare)<br/>
+              Lose a life → weapon + fire rate reset to base.
+            </div>
 
-.hud{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; align-items:center; }
+            <div class="panelBtns">
+              <button id="btnPrimary" class="btn primary">Start</button>
+              <button id="btnSound" class="btn">SFX: ON</button>
+            </div>
 
-.hudItem{
-  display:flex; gap:8px; align-items:center;
-  padding:7px 10px;
-  border:1px solid rgba(0,0,0,.12);
-  border-radius:999px;
-  background: rgba(255,255,255,.62);
-}
-.hudItem .k{ font-size:12px; color:rgba(0,0,0,.55); }
-.hudItem .v{ font-size:12px; font-weight:800; }
+            <div class="panelBtns smallRow">
+              <button id="btnResume" class="btn" style="display:none;">Resume</button>
+              <button id="btnRestart" class="btn" style="display:none;">Restart</button>
+            </div>
 
-.hudBtn{
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  border:1px solid rgba(0,0,0,.12);
-  background: rgba(255,255,255,.70);
-  font-weight: 950;
-  cursor:pointer;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  line-height:1;
-  user-select:none;
-}
-.hudBtn:hover{ background: rgba(255,255,255,.88); }
-.hudBtn:active{ transform: translateY(1px); }
+            <div class="tiny">
+              Tip: Focus slows time heavily for precision dodging.
+            </div>
+          </div>
+        </div>
 
-.stage{
-  flex:1;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:flex-start;
-  padding:12px;
-  gap:10px;
-}
+        <div id="toast" class="toast" aria-live="polite"></div>
+      </div>
 
-.canvasWrap{
-  position:relative;
-  width:min(92vw, 460px);
-  height:min(60vh, 640px);
-  border-radius:18px;
-  overflow:hidden;
-  border:1px solid rgba(0,0,0,.14);
-  background: rgba(255,255,255,.50);
-  box-shadow: var(--shadow);
-}
-canvas{ width:100%; height:100%; display:block; }
+      <!-- Mobile Controls (layout: FIRE left big, Focus/Pause middle, joystick right) -->
+      <div class="mobileControls" id="mobileControls">
+        <button class="btn action fireBig" id="btnFire" aria-label="Fire">FIRE (Space)</button>
 
-.overlay{
-  position:absolute;
-  inset:0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background: radial-gradient(800px 600px at 50% 30%, rgba(47,91,255,.22), rgba(255,255,255,.65));
-  backdrop-filter: blur(8px);
-}
+        <div class="actionsMid">
+          <button class="btn action" id="btnFocus" aria-label="Focus">FOCUS (Shift)</button>
+          <button class="btn action" id="btnPause" aria-label="Pause">PAUSE (P)</button>
+        </div>
 
-.panel{
-  width:min(92%, 520px);
-  border-radius:20px;
-  padding:16px 14px;
-  border:1px solid rgba(0,0,0,.12);
-  background: linear-gradient(180deg, rgba(255,255,255,.88), rgba(255,255,255,.68));
-  box-shadow: var(--shadow);
-}
-.panelTitle{
-  font-size:20px;
-  font-weight:950;
-  letter-spacing:.06em;
-  margin-bottom:10px;
-}
-.panelText{
-  font-size:14px;
-  color:rgba(0,0,0,.72);
-  line-height:1.5;
-}
-.panelBtns{
-  display:flex;
-  gap:10px;
-  margin-top:12px;
-  flex-wrap:wrap;
-}
-.panelBtns.smallRow{ margin-top:10px; }
-.tiny{ margin-top:10px; color:rgba(0,0,0,.55); font-size:12px; }
+        <div class="pad" id="pad">
+          <div class="padRing"></div>
+          <div class="padStick" id="padStick"></div>
+        </div>
+      </div>
+    </main>
 
-.btn{
-  border:1px solid rgba(0,0,0,.14);
-  background: rgba(255,255,255,.70);
-  color: rgba(0,0,0,.80);
-  padding:10px 12px;
-  border-radius:14px;
-  cursor:pointer;
-  font-weight:900;
-  letter-spacing:.02em;
-  transition: transform .08s ease, background .2s ease, border-color .2s ease;
-}
-.btn:hover{ background: rgba(255,255,255,.88); border-color: rgba(0,0,0,.20); }
-.btn:active{ transform: translateY(1px) scale(.99); }
-.btn.primary{
-  border-color: rgba(47,91,255,.35);
-  background: linear-gradient(135deg, rgba(47,91,255,.18), rgba(34,211,238,.18));
-}
+    <footer class="footer">
+      <div class="hint">
+        GitHub Pages: Settings → Pages → Deploy from branch → <b>main</b> / <b>root</b>.
+      </div>
+    </footer>
+  </div>
 
-.toast{
-  position:absolute;
-  left:12px;
-  bottom:12px;
-  max-width: calc(100% - 24px);
-  padding:10px 12px;
-  border-radius:14px;
-  border:1px solid rgba(0,0,0,.14);
-  background: rgba(255,255,255,.78);
-  color: rgba(0,0,0,.78);
-  font-size:13px;
-  opacity:0;
-  transform: translateY(6px);
-  transition: opacity .25s ease, transform .25s ease;
-  pointer-events:none;
-}
-.toast.show{ opacity:1; transform: translateY(0); }
-
-.mobileControls{
-  width:min(92vw, 460px);
-  display:flex;
-  gap:12px;
-  justify-content:space-between;
-  align-items:center;
-}
-
-.pad{
-  position:relative;
-  width:120px; height:120px;
-  border-radius:999px;
-  border:1px solid rgba(0,0,0,.14);
-  background: rgba(255,255,255,.62);
-  box-shadow: 0 10px 22px rgba(0,0,0,.10);
-  touch-action:none;
-}
-.padRing{
-  position:absolute; inset:12px;
-  border-radius:999px;
-  border:1px dashed rgba(0,0,0,.18);
-}
-.padStick{
-  position:absolute;
-  left:50%; top:50%;
-  width:50px; height:50px;
-  margin-left:-25px; margin-top:-25px;
-  border-radius:999px;
-  background: linear-gradient(135deg, rgba(47,91,255,.35), rgba(34,211,238,.28));
-  border:1px solid rgba(0,0,0,.14);
-  box-shadow: 0 0 18px rgba(47,91,255,.18);
-  transform: translate(0,0);
-}
-
-.btn.action{
-  width:104px;
-  height:52px;
-  border-radius:16px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:14px;
-  user-select:none;
-}
-
-.footer{
-  padding:10px 14px 14px;
-  border-top:1px solid rgba(0,0,0,.10);
-  color:rgba(0,0,0,.55);
-}
-
-/* Desktop layout */
-@media (min-width: 900px){
-  .stage{ flex-direction:row; align-items:flex-start; justify-content:center; gap:16px; }
-  .canvasWrap{ height:min(74vh, 740px); width:min(56vw, 520px); }
-
-  .mobileControls{
-    width: 260px;
-    flex-direction:column;
-    align-items:stretch;
-    justify-content:flex-start;
-  }
-
-  .actionsMid{
-    display:flex;
-    flex-direction:column;
-    gap:10px;
-  }
-
-  .btn.action{ width:100%; }
-}
-
-/* Mobile: HUD 2 lines only + controls FIRE left, focus/pause middle, joystick right */
-@media (max-width: 520px){
-  .topbar{
-    padding: 6px 10px;
-    gap: 8px;
-  }
-  .title .name{ font-size: 11px; }
-  .title .sub{ display:none; }
-
-  .hud{
-    display:grid;
-    grid-template-columns: repeat(2, max-content);
-    grid-auto-rows: auto;
-    gap: 6px 8px;
-    justify-content: end;
-    align-content: center;
-  }
-
-  .hudItem{
-    padding: 5px 8px;
-    gap: 6px;
-  }
-  .hudItem .k,
-  .hudItem .v{ font-size: 11px; }
-
-  .hideMobile{ display:none !important; }
-  .hudBtn{ width: 28px; height: 28px; }
-
-  .canvasWrap{ height: min(62vh, 640px); }
-
-  .mobileControls{
-    width:min(92vw, 460px);
-    display:grid;
-    grid-template-columns: 1.2fr 0.9fr 1.2fr;
-    grid-template-areas: "fire mid pad";
-    gap: 12px;
-    align-items:center;
-  }
-
-  #btnFire{
-    grid-area: fire;
-    width: 100%;
-    height: 96px;
-    font-size: 18px;
-    border-radius: 18px;
-  }
-
-  .actionsMid{
-    grid-area: mid;
-    display:flex;
-    flex-direction:column;
-    gap: 10px;
-  }
-
-  #btnFocus, #btnPause{
-    width: 100%;
-    height: 44px;
-    font-size: 12px;
-    border-radius: 14px;
-  }
-
-  .pad{
-    grid-area: pad;
-    width: 120px;
-    height: 120px;
-    justify-self: end;
-  }
-}
+  <script src="game.js"></script>
+</body>
+</html>
