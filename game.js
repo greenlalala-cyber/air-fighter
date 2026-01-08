@@ -8,12 +8,14 @@
   const chance = (p) => Math.random() < p;
 
   // =========================
-  // Language (EN / TC)
+  // Language (EN / TC) — FIXED
   // =========================
-  let LANG = "EN"; // "EN" | "TC"
+  const LANG_KEY = "airfighter_lang";
+  let LANG = (localStorage.getItem(LANG_KEY) === "TC") ? "TC" : "EN";
 
   const I18N = {
     EN: {
+      title: "AIR FIGHTER",
       brandSub: "3 scenes • upgrades • bosses",
       hud: { scene:"Scene", lives:"Lives", hp:"HP", weapon:"Weapon", fire:"Fire", luck:"Luck", sfx:"SFX" },
       buttons: { start:"Start", resume:"Resume", restart:"Restart", how:"How to Play" },
@@ -64,6 +66,7 @@
     },
 
     TC: {
+      title: "咻咻戰鬥機",
       brandSub: "3 幕 • 升級 • 首領",
       hud: { scene:"場景", lives:"生命", hp:"血量", weapon:"武器", fire:"射速", luck:"幸運", sfx:"音效" },
       buttons: { start:"開始", resume:"繼續", restart:"重來", how:"玩法說明" },
@@ -154,6 +157,7 @@
   const lblLuck   = document.getElementById("lblLuck");
   const lblSfx    = document.getElementById("lblSfx");
 
+  const brandName = document.getElementById("brandName");
   const brandSub  = document.getElementById("brandSub");
   const footerHint= document.getElementById("footerHint");
   const overlayTip= document.getElementById("overlayTip");
@@ -176,8 +180,16 @@
 
   function T(){ return I18N[LANG]; }
 
+  function sceneName(n){ return SCENES[n]?.[LANG] ?? SCENES[n]?.EN ?? `Scene ${n}`; }
+  function weaponName(tier){ return WEAPONS[tier]?.name?.[LANG] ?? WEAPONS[tier]?.name?.EN ?? "Basic"; }
+
   function applyLang(){
     const t = T();
+
+    // Titles
+    document.title = t.title;
+    brandName.textContent = t.title;
+    overlayTitle.textContent = t.title;
 
     // HUD labels
     lblScene.textContent  = t.hud.scene;
@@ -188,24 +200,24 @@
     if (lblLuck) lblLuck.textContent = t.hud.luck;
     if (lblSfx)  lblSfx.textContent  = t.hud.sfx;
 
-    // Brand + footer + tip
     brandSub.textContent = t.brandSub;
     footerHint.innerHTML = t.footer;
     overlayTip.textContent = t.tip;
 
-    // Buttons (static)
+    // Buttons
     btnPrimary.textContent = t.buttons.start;
     btnResume.textContent  = t.buttons.resume;
     btnRestart.textContent = t.buttons.restart;
     btnSound.textContent   = (SFX.enabled ? t.sfxOn : t.sfxOff);
 
-    // Mobile control labels
+    // Mobile labels
     btnFire.textContent  = t.mobile.fire;
     btnFocus.textContent = t.mobile.focus;
     btnPause.textContent = t.mobile.pause;
 
     // Lang pill
     btnLang.textContent = LANG;
+    btnLang.setAttribute("aria-label", LANG === "EN" ? "Switch to Traditional Chinese" : "切換為英文");
   }
 
   function showToast(msg){
@@ -304,7 +316,6 @@
     if (e.code === "ShiftLeft" || e.code === "ShiftRight") focus = false;
   });
 
-  // Mobile joystick + buttons
   const pad = document.getElementById("pad");
   const padStick = document.getElementById("padStick");
 
@@ -316,7 +327,7 @@
   updatePadRect();
 
   function setStick(nx, ny){
-    const r = 40;
+    const r = 42; // slightly snappier stick travel
     padStick.style.transform = `translate(${nx * r}px, ${ny * r}px)`;
   }
 
@@ -328,9 +339,17 @@
     const dy = clientY - cy;
     const maxR = padRect.width * 0.33;
     const mag = Math.hypot(dx, dy) || 1;
-    const nx = clamp(dx / maxR, -1, 1);
-    const ny = clamp(dy / maxR, -1, 1);
+
+    // a bit more responsive near center
+    let nx = clamp(dx / maxR, -1, 1);
+    let ny = clamp(dy / maxR, -1, 1);
     const cMag = Math.min(1, mag / maxR);
+
+    // response curve (less sluggish)
+    const curve = 0.85;
+    nx = Math.sign(nx) * Math.pow(Math.abs(nx), curve);
+    ny = Math.sign(ny) * Math.pow(Math.abs(ny), curve);
+
     joy.x = nx * cMag;
     joy.y = ny * cMag;
     setStick(joy.x, joy.y);
@@ -356,15 +375,15 @@
 
   btnPause.addEventListener("click", () => { ensureAudio(); togglePause(); });
 
-  // Language toggle
-  btnLang.addEventListener("click", () => {
+  // ✅ Language toggle (reliable) + persist
+  btnLang.addEventListener("click", (e) => {
+    e.stopPropagation();
     ensureAudio();
     LANG = (LANG === "EN") ? "TC" : "EN";
+    localStorage.setItem(LANG_KEY, LANG);
     applyLang();
-
-    // if overlay is open, refresh it to the correct language context
+    // refresh overlay content if visible
     if (overlay.style.display !== "none"){
-      // keep paused overlay in sync
       if (!state.running){
         showStartOverlay();
       } else if (state.paused){
@@ -386,7 +405,6 @@
     scene: 1,
     phase: "wave",
     stars: [],
-    fx: [],
     shake: 0,
     luck: 1.0,
     dropBoost: 0,
@@ -400,7 +418,10 @@
     x: W/2,
     y: H*0.78,
     r: 14,
-    spd: 250,
+
+    // ✅ more responsive + a bit faster
+    spd: 305,
+
     hp: 10,
     hpMax: 10,
     lives: 3,
@@ -419,10 +440,11 @@
   const drops = [];
   let boss = null;
 
+  // ✅ 1) Reduce enemy bullet rate (lower fire mult = longer cooldown)
   const sceneConfig = {
-    1: { enemyRate:0.90, baseEnemyHP:9,  bulletSpeed:150, bossHP:430, enemyFireMult:0.72, bossFireMult:0.70 },
-    2: { enemyRate:0.70, baseEnemyHP:12, bulletSpeed:180, bossHP:650, enemyFireMult:0.88, bossFireMult:0.88 },
-    3: { enemyRate:0.82, baseEnemyHP:15, bulletSpeed:210, bossHP:900, enemyFireMult:1.00, bossFireMult:1.00 },
+    1: { enemyRate:0.90, baseEnemyHP:9,  bulletSpeed:150, bossHP:430, enemyFireMult:0.52, bossFireMult:0.56 },
+    2: { enemyRate:0.70, baseEnemyHP:12, bulletSpeed:180, bossHP:650, enemyFireMult:0.72, bossFireMult:0.78 },
+    3: { enemyRate:0.82, baseEnemyHP:15, bulletSpeed:210, bossHP:900, enemyFireMult:0.92, bossFireMult:0.96 },
   };
 
   // =========================
@@ -434,9 +456,6 @@
       state.stars.push({ x:Math.random()*W, y:Math.random()*H, s:rand(0.6,2.0), v:rand(30,110) });
     }
   }
-
-  function sceneName(n){ return SCENES[n]?.[LANG] ?? SCENES[n]?.EN ?? `Scene ${n}`; }
-  function weaponName(tier){ return WEAPONS[tier]?.name?.[LANG] ?? WEAPONS[tier]?.name?.EN ?? "Basic"; }
 
   function resetForNewRun(){
     state.t = 0;
@@ -454,7 +473,7 @@
     player.y = H*0.78;
     player.hp = 10;
     player.lives = 3;
-    player.invuln = 1.3;
+    player.invuln = 1.1;
     player.weaponTier = 0;
     player.weaponHeat = 0;
     player.missileCooldown = 0;
@@ -497,7 +516,7 @@
   }
 
   // =========================
-  // Enemies / Boss (unchanged visuals)
+  // Enemies & Boss
   // =========================
   function spawnEnemy(kind){
     const cfg = sceneConfig[state.scene];
@@ -506,24 +525,24 @@
 
     let e;
     if (kind === "drone"){
-      e = { kind, x, y, r:16, hp:cfg.baseEnemyHP, spd:rand(62,105)+(state.scene-1)*8, t:0, shootCD:rand(1.0,1.5) };
+      e = { kind, x, y, r:16, hp:cfg.baseEnemyHP, spd:rand(62,105)+(state.scene-1)*8, t:0, shootCD:rand(1.2,1.8) };
     } else if (kind === "sweeper"){
-      e = { kind, x, y, r:18, hp:cfg.baseEnemyHP+5, spd:rand(54,92), t:0, shootCD:rand(1.0,1.7), dir: chance(0.5)?-1:1 };
+      e = { kind, x, y, r:18, hp:cfg.baseEnemyHP+5, spd:rand(54,92), t:0, shootCD:rand(1.2,2.0), dir: chance(0.5)?-1:1 };
     } else if (kind === "sniper"){
-      e = { kind, x, y, r:17, hp:cfg.baseEnemyHP+3, spd:rand(50,86), t:0, shootCD:rand(1.3,2.0), windup:0 };
+      e = { kind, x, y, r:17, hp:cfg.baseEnemyHP+3, spd:rand(50,86), t:0, shootCD:rand(1.7,2.6), windup:0 };
     } else {
-      e = { kind:"bomber", x, y, r:20, hp:cfg.baseEnemyHP+8, spd:rand(48,78), t:0, shootCD:rand(1.4,2.2) };
+      e = { kind:"bomber", x, y, r:20, hp:cfg.baseEnemyHP+8, spd:rand(48,78), t:0, shootCD:rand(1.8,2.8) };
     }
     enemies.push(e);
   }
 
   function startBoss(){
+    const cfg = sceneConfig[state.scene];
     const bossTypes = ["HELIX_WARDEN", "PRISM_HYDRA", "ABYSS_CROWN"];
     boss = {
       type: bossTypes[state.scene - 1],
       x: W/2, y: -100, r: 52,
-      hp: sceneConfig[state.scene].bossHP,
-      hpMax: sceneConfig[state.scene].bossHP,
+      hp: cfg.bossHP, hpMax: cfg.bossHP,
       t: 0, enter: 1.2, shot: 0, drift: chance(0.5)?-1:1
     };
     state.phase = "boss";
@@ -541,10 +560,9 @@
       state.scene += 1;
       state.phase = "wave";
       state.waveStartTime = state.t;
-      player.invuln = 1.2;
+      player.invuln = 1.0;
       showToast(T().toast.sceneNow(state.scene, sceneName(state.scene)));
     } else {
-      state.phase = "clear";
       openOverlay(
         LANG === "EN" ? "YOU WIN" : "你贏了",
         LANG === "EN"
@@ -557,7 +575,7 @@
   }
 
   // =========================
-  // Weapons (names localized in HUD/toasts)
+  // Weapons
   // =========================
   function fireCooldown(multBase){
     return multBase * FIRE_RATE_MULT[player.fireRateLevel];
@@ -582,7 +600,7 @@
     const kind = WEAPONS[tier].kind;
 
     if (kind === "basic"){
-      bullets.push({ x:player.x, y:player.y-18, vx:0, vy:-520, r:4, dmg:8, kind:"basic", t:0, color:weaponColor("basic") });
+      bullets.push({ x:player.x, y:player.y-18, vx:0, vy:-520, r:4, dmg:8, kind:"basic", color:weaponColor("basic") });
       player.weaponHeat = fireCooldown(0.24);
       playSfx.shootSoft(clamp((player.x / W) * 2 - 1, -1, 1));
       return;
@@ -591,7 +609,7 @@
     if (kind === "spread"){
       const speeds = [-155, 0, 155];
       for (const sx of speeds){
-        bullets.push({ x:player.x, y:player.y-18, vx:sx, vy:-520, r:4, dmg:7, kind:"spread", t:0, color:weaponColor("spread") });
+        bullets.push({ x:player.x, y:player.y-18, vx:sx, vy:-520, r:4, dmg:7, kind:"spread", color:weaponColor("spread") });
       }
       player.weaponHeat = fireCooldown(0.21);
       playSfx.shootSoft(clamp((player.x / W) * 2 - 1, -1, 1));
@@ -599,16 +617,16 @@
     }
 
     if (kind === "laser"){
-      bullets.push({ x:player.x, y:player.y-22, vx:0, vy:-860, r:3, dmg:10, kind:"laser", t:0, pierce:1, color:weaponColor("laser") });
+      bullets.push({ x:player.x, y:player.y-22, vx:0, vy:-860, r:3, dmg:10, kind:"laser", pierce:1, color:weaponColor("laser") });
       player.weaponHeat = fireCooldown(0.16);
       playSfx.shootLaser(clamp((player.x / W) * 2 - 1, -1, 1));
       return;
     }
 
     if (kind === "missiles"){
-      bullets.push({ x:player.x, y:player.y-18, vx:0, vy:-540, r:4, dmg:8, kind:"basic", t:0, color:weaponColor("basic") });
+      bullets.push({ x:player.x, y:player.y-18, vx:0, vy:-540, r:4, dmg:8, kind:"basic", color:weaponColor("basic") });
       if (player.missileCooldown <= 0){
-        bullets.push({ x:player.x, y:player.y-10, vx:rand(-50,50), vy:-260, r:6, dmg:16, kind:"missile", t:0, turn:6.0, life:3.0, color:weaponColor("missile") });
+        bullets.push({ x:player.x, y:player.y-10, vx:rand(-50,50), vy:-260, r:6, dmg:16, kind:"missile", turn:6.0, life:3.0, color:weaponColor("missile") });
         player.missileCooldown = 0.62;
         playSfx.shootMissile(clamp((player.x / W) * 2 - 1, -1, 1));
       } else {
@@ -619,14 +637,14 @@
     }
 
     if (kind === "piercer"){
-      bullets.push({ x:player.x-10, y:player.y-20, vx:0, vy:-780, r:3, dmg:9, kind:"pierce", t:0, pierce:2, color:weaponColor("pierce") });
-      bullets.push({ x:player.x+10, y:player.y-20, vx:0, vy:-780, r:3, dmg:9, kind:"pierce", t:0, pierce:2, color:weaponColor("pierce") });
+      bullets.push({ x:player.x-10, y:player.y-20, vx:0, vy:-780, r:3, dmg:9, kind:"pierce", pierce:2, color:weaponColor("pierce") });
+      bullets.push({ x:player.x+10, y:player.y-20, vx:0, vy:-780, r:3, dmg:9, kind:"pierce", pierce:2, color:weaponColor("pierce") });
       player.weaponHeat = fireCooldown(0.19);
       playSfx.shootLaser(clamp((player.x / W) * 2 - 1, -1, 1));
       return;
     }
 
-    bullets.push({ x:player.x, y:player.y-22, vx:0, vy:-820, r:4, dmg:8, kind:"shock", t:0, pierce:4, color:weaponColor("shock") });
+    bullets.push({ x:player.x, y:player.y-22, vx:0, vy:-820, r:4, dmg:8, kind:"shock", pierce:4, color:weaponColor("shock") });
     player.weaponHeat = fireCooldown(0.20);
     playSfx.shootLaser(clamp((player.x / W) * 2 - 1, -1, 1));
   }
@@ -676,10 +694,9 @@
 
     if (player.lives > 0){
       player.hp = player.hpMax;
-      player.invuln = 1.9;
+      player.invuln = 1.6;
       showToast(T().toast.lifeLost(state.luck.toFixed(2)));
     } else {
-      state.phase = "gameover";
       openOverlay(
         LANG === "EN" ? "GAME OVER" : "遊戲結束",
         LANG === "EN"
@@ -696,11 +713,14 @@
     if (player.invuln > 0) return;
     player.hp -= dmg;
     state.shake = Math.min(0.60, state.shake + 0.08);
-    player.invuln = 0.28;
+    player.invuln = 0.24;
     playSfx.hit();
     if (player.hp <= 0) loseLife();
   }
 
+  // =========================
+  // Collision helpers
+  // =========================
   function circleHit(ax, ay, ar, bx, by, br){
     const dx = ax - bx, dy = ay - by, rr = ar + br;
     return dx*dx + dy*dy <= rr*rr;
@@ -712,7 +732,7 @@
   }
 
   function fireEnemyBullet(x, y, vx, vy, dmg, r=5, kind="bullet"){
-    enemyBullets.push({ x, y, vx, vy, dmg, r, t:0, kind, explode:0 });
+    enemyBullets.push({ x, y, vx, vy, dmg, r, kind, explode:0 });
   }
 
   function findMissileTarget(x, y){
@@ -741,13 +761,13 @@
   }
   function closeOverlay(){ overlay.style.display = "none"; }
 
-  let last = 0;
-
   function openPausedOverlay(){
     openOverlay(T().pausedTitle, T().pausedText, {
       showResume:true, showRestart:true, primary:T().buttons.how
     });
   }
+
+  let last = 0;
 
   function togglePause(){
     if (!state.running) return;
@@ -776,7 +796,6 @@
       requestAnimationFrame(tick);
       return;
     }
-
     overlayTitle.textContent = T().howTitle;
     overlayText.innerHTML = T().howText;
     btnPrimary.textContent = T().buttons.how;
@@ -786,20 +805,19 @@
   btnRestart.addEventListener("click", () => { ensureAudio(); closeOverlay(); resetForNewRun(); state.running=true; state.paused=false; last=0; requestAnimationFrame(tick); });
 
   // =========================
-  // Help popup with localized canvas labels
+  // Help popup (mini-icons drawn on canvas)
   // =========================
   function roundRect(c, x, y, w, h, r){
-    const rr = typeof r === "number" ? { tl:r, tr:r, br:r, bl:r } : r;
     c.beginPath();
-    c.moveTo(x + rr.tl, y);
-    c.lineTo(x + w - rr.tr, y);
-    c.quadraticCurveTo(x + w, y, x + w, y + rr.tr);
-    c.lineTo(x + w, y + h - rr.br);
-    c.quadraticCurveTo(x + w, y + h, x + w - rr.br, y + h);
-    c.lineTo(x + rr.bl, y + h);
-    c.quadraticCurveTo(x, y + h, x, y + h - rr.bl);
-    c.lineTo(x, y + rr.tl);
-    c.quadraticCurveTo(x, y, x + rr.tl, y);
+    c.moveTo(x+r, y);
+    c.lineTo(x+w-r, y);
+    c.quadraticCurveTo(x+w, y, x+w, y+r);
+    c.lineTo(x+w, y+h-r);
+    c.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+    c.lineTo(x+r, y+h);
+    c.quadraticCurveTo(x, y+h, x, y+h-r);
+    c.lineTo(x, y+r);
+    c.quadraticCurveTo(x, y, x+r, y);
     c.closePath();
   }
 
@@ -863,10 +881,7 @@
   }
 
   function drawHelpCanvasIcons(c2){
-    if (!c2) return;
     const g = c2.getContext("2d");
-    if (!g) return;
-
     const t = T();
     const w = c2.width, h = c2.height;
     g.clearRect(0,0,w,h);
@@ -970,7 +985,8 @@
     state.abortFrame = false;
     state.t += dt;
 
-    const dtWorld = dt * (focus ? 0.22 : 1.0);
+    // ✅ keep focus slow, but player feels less "stuck"
+    const dtWorld = dt * (focus ? 0.20 : 1.0);
 
     const bgSpeed = 220;
     state.bgScroll = (state.bgScroll + bgSpeed * dtWorld) % 100000;
@@ -978,17 +994,20 @@
     state.shake = Math.max(0, state.shake - dt * 1.6);
     state.dropBoost = Math.max(0, state.dropBoost - dt * 0.08);
 
-    // move player
+    // move player (more responsive + faster)
     let mx=0,my=0;
     if (keys.has("ArrowLeft") || keys.has("KeyA")) mx -= 1;
     if (keys.has("ArrowRight")|| keys.has("KeyD")) mx += 1;
     if (keys.has("ArrowUp")   || keys.has("KeyW")) my -= 1;
     if (keys.has("ArrowDown") || keys.has("KeyS")) my += 1;
     mx += joy.x; my += joy.y;
+
     const mag = Math.hypot(mx,my) || 1;
     if (mag > 1){ mx/=mag; my/=mag; }
 
-    const spd = player.spd * (focus ? 0.32 : 1.0);
+    // focus movement slightly faster than before (less sluggish)
+    const spd = player.spd * (focus ? 0.40 : 1.0);
+
     player.x += mx * spd * dt;
     player.y += my * spd * dt;
     player.x = clamp(player.x, 24, W-24);
@@ -1038,7 +1057,7 @@
       }
     }
 
-    // enemies (same as before)
+    // enemies
     for (let i=enemies.length-1; i>=0; i--){
       const e = enemies[i];
       e.t += dtWorld;
@@ -1058,36 +1077,37 @@
         const mult = cfg.enemyFireMult;
         const sp = cfg.bulletSpeed;
 
+        // ✅ bullet rate reduced by: longer cooldown ranges + smaller mult
         if (e.kind === "drone"){
-          e.shootCD = rand(0.9, 1.4) / mult;
+          e.shootCD = rand(1.15, 1.85) / mult;
           const v = aimToPlayer(e.x, e.y, sp);
           fireEnemyBullet(e.x, e.y+10, v.vx, v.vy, 4, 5, "bullet");
         }
 
         if (e.kind === "sweeper"){
-          e.shootCD = rand(1.0, 1.6) / mult;
+          e.shootCD = rand(1.25, 2.05) / mult;
           const base = Math.atan2(player.y - e.y, player.x - e.x);
-          const angles = (state.scene === 1) ? [-0.20, 0.20] : [-0.24, 0, 0.24];
+          const angles = (state.scene === 1) ? [-0.18, 0.18] : [-0.22, 0.22];
           for (const a of angles){
             fireEnemyBullet(e.x, e.y+10, Math.cos(base+a)*sp, Math.sin(base+a)*sp, 4, 5, "bullet");
           }
         }
 
         if (e.kind === "sniper"){
-          e.windup = 0.35;
-          e.shootCD = rand(1.6, 2.3) / mult;
+          e.windup = 0.42;
+          e.shootCD = rand(2.0, 3.0) / mult;
         }
 
         if (e.kind === "bomber"){
-          e.shootCD = rand(1.4, 2.2) / mult;
-          enemyBullets.push({ x:e.x, y:e.y+12, vx:0, vy:sp*0.55, dmg:5, r:7, t:0, kind:"bomb", explode:0.95 });
+          e.shootCD = rand(2.1, 3.1) / mult;
+          enemyBullets.push({ x:e.x, y:e.y+12, vx:0, vy:sp*0.55, dmg:5, r:7, kind:"bomb", explode:0.95 });
         }
       }
 
       if (e.kind === "sniper" && e.windup > 0){
         e.windup -= dtWorld;
         if (e.windup <= 0){
-          const v = aimToPlayer(e.x, e.y, cfg.bulletSpeed + 85);
+          const v = aimToPlayer(e.x, e.y, cfg.bulletSpeed + 80);
           fireEnemyBullet(e.x, e.y+10, v.vx, v.vy, 6, 5, "bullet");
         }
       }
@@ -1095,7 +1115,7 @@
       if (e.y > H + 70) enemies.splice(i, 1);
     }
 
-    // boss (same as before)
+    // boss
     if (boss){
       boss.t += dtWorld;
 
@@ -1109,8 +1129,11 @@
 
       boss.shot -= dtWorld;
       const fireMult = cfg.bossFireMult;
+
+      // ✅ boss bullet rate reduced (bigger base cd)
       if (boss.shot <= 0){
-        boss.shot = 0.22 / fireMult;
+        boss.shot = 0.30 / fireMult;
+
         const sp = cfg.bulletSpeed + 35;
 
         if (boss.type === "HELIX_WARDEN"){
@@ -1118,12 +1141,12 @@
           fireEnemyBullet(boss.x, boss.y+22, Math.cos(a)*sp, Math.sin(a)*sp, 4, 5, "bullet");
         } else if (boss.type === "PRISM_HYDRA"){
           const base = Math.atan2(player.y - boss.y, player.x - boss.x);
-          const fan = [-0.26, -0.13, 0, 0.13, 0.26];
+          const fan = [-0.24, 0, 0.24];
           for (const off of fan){
-            fireEnemyBullet(boss.x, boss.y+22, Math.cos(base+off)*(sp+30), Math.sin(base+off)*(sp+30), 5, 5, "bullet");
+            fireEnemyBullet(boss.x, boss.y+22, Math.cos(base+off)*(sp+20), Math.sin(base+off)*(sp+20), 5, 5, "bullet");
           }
         } else {
-          const v = aimToPlayer(boss.x, boss.y, sp+105);
+          const v = aimToPlayer(boss.x, boss.y, sp+95);
           fireEnemyBullet(boss.x, boss.y+22, v.vx, v.vy, 6, 6, "bullet");
         }
       }
@@ -1149,8 +1172,8 @@
         if (b.life <= 0){ bullets.splice(i,1); continue; }
       }
 
-      b.x += b.vx * dtWorld;
-      b.y += b.vy * dtWorld;
+      b.x += (b.vx ?? 0) * dtWorld;
+      b.y += (b.vy ?? 0) * dtWorld;
 
       let removed = false;
 
@@ -1183,7 +1206,7 @@
         }
       }
 
-      if (!removed && (b.y < -50 || b.y > H+50 || b.x < -60 || b.x > W+60)){
+      if (!removed && (b.y < -60 || b.y > H+60 || b.x < -80 || b.x > W+80)){
         bullets.splice(i,1);
       }
     }
@@ -1196,8 +1219,8 @@
         b.explode -= dtWorld;
         b.y += b.vy * dtWorld;
         if (b.explode <= 0){
-          const n = 7;
-          const sp = cfg.bulletSpeed + 40;
+          const n = 6;                 // slightly fewer fragments
+          const sp = cfg.bulletSpeed + 35;
           for (let k=0;k<n;k++){
             const ang = (k/n) * Math.PI*2;
             fireEnemyBullet(b.x, b.y, Math.cos(ang)*sp, Math.sin(ang)*sp, 4, 5, "bullet");
@@ -1217,7 +1240,7 @@
         continue;
       }
 
-      if (b.y > H+60 || b.y < -70 || b.x < -80 || b.x > W+80){
+      if (b.y > H+70 || b.y < -90 || b.x < -100 || b.x > W+100){
         enemyBullets.splice(i,1);
       }
     }
@@ -1251,13 +1274,12 @@
         drops.splice(i,1);
         continue;
       }
-
-      if (d.y > H + 50) drops.splice(i,1);
+      if (d.y > H + 60) drops.splice(i,1);
     }
 
     if (state.abortFrame){
       enemyBullets.length = 0;
-      enemies.forEach(e => e.shootCD += 0.7);
+      enemies.forEach(e => e.shootCD += 0.8);
       state.abortFrame = false;
     }
 
@@ -1272,7 +1294,7 @@
   }
 
   // =========================
-  // Draw (same visuals as your previous version)
+  // Draw
   // =========================
   function draw(){
     ctx.clearRect(0,0,W,H);
@@ -1444,6 +1466,7 @@
 
   function drawBoss(){
     if (!boss) return;
+
     const pad = 12;
     const barW = W - pad*2;
     const barH = 10;
@@ -1567,9 +1590,8 @@
     ctx.textBaseline = "middle";
 
     const hpLabel = (LANG === "EN") ? "HP" : "血量";
-    ctx.fillText(`${hpLabel} ${Math.ceil(player.hp)}/${player.hpMax}`, x + 10, y + h/2);
-
     const fireLabel = (LANG === "EN") ? "FIRE" : "射速";
+    ctx.fillText(`${hpLabel} ${Math.ceil(player.hp)}/${player.hpMax}`, x + 10, y + h/2);
     ctx.fillText(`♥ x${player.lives}   ${fireLabel} ${FIRE_RATE_LABEL[player.fireRateLevel]}`, x + w + 12, y + h/2);
 
     ctx.globalAlpha = 1;
@@ -1602,15 +1624,17 @@
   // =========================
   function showStartOverlay(){
     overlay.style.display = "flex";
-    overlayTitle.textContent = "NEON VANGUARD";
+    overlayTitle.textContent = T().title;
     overlayText.innerHTML = T().overlayStart;
     btnPrimary.textContent = T().buttons.start;
     btnResume.style.display = "none";
     btnRestart.style.display = "none";
   }
 
-  // boot
-  showStartOverlay();
+  // =========================
+  // Boot
+  // =========================
   setSfxEnabled(true);
   applyLang();
+  showStartOverlay();
 })();
