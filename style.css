@@ -68,7 +68,6 @@ body{
   gap:10px;
 }
 
-/* 1) Fit on one screen: cap height, reduce width */
 .canvasWrap{
   position:relative;
   width:min(92vw, 460px);
@@ -187,9 +186,9 @@ canvas{ width:100%; height:100%; display:block; }
   background: linear-gradient(135deg, rgba(47,91,255,.35), rgba(34,211,238,.28));
   border:1px solid rgba(0,0,0,.14);
   box-shadow: 0 0 18px rgba(47,91,255,.18);
+  transform: translate(0,0);
 }
 
-.actions{ display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
 .btn.action{
   width:104px;
   height:52px;
@@ -198,6 +197,7 @@ canvas{ width:100%; height:100%; display:block; }
   align-items:center;
   justify-content:center;
   font-size:14px;
+  user-select:none;
 }
 
 .footer{
@@ -206,77 +206,111 @@ canvas{ width:100%; height:100%; display:block; }
   color:rgba(0,0,0,.55);
 }
 
+/* Desktop layout (unchanged behavior) */
 @media (min-width: 900px){
   .stage{ flex-direction:row; align-items:flex-start; justify-content:center; gap:16px; }
   .canvasWrap{ height:min(74vh, 740px); width:min(56vw, 520px); }
+
   .mobileControls{
     width: 260px;
     flex-direction:column;
     align-items:stretch;
     justify-content:flex-start;
   }
-  .actions{ flex-direction:column; }
+
+  /* On desktop, keep actions stacked */
+  .actionsMid{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+
   .btn.action{ width:100%; }
 }
-/* =========================
-   Mobile layout improvements
-   ========================= */
+
+/* ==========================================
+   Mobile: EXACT layout per your reference pic
+   - HUD: 2 lines only
+   - Controls: FIRE left (big), Focus/Pause middle, joystick right
+   ========================================== */
 @media (max-width: 520px){
-  /* 2) Reduce upper info area height */
+
+  /* Make the top info area smaller */
   .topbar{
-    padding: 6px 10px;              /* was larger */
+    padding: 6px 10px;
     gap: 8px;
   }
 
-  .title .name{
-    font-size: 11px;                /* slightly smaller */
-  }
+  .title .name{ font-size: 11px; }
+  .title .sub{ display:none; }
 
-  .title .sub{
-    display: none;                  /* remove subtitle to save vertical space */
-  }
-
+  /* HUD becomes a 2-row grid (2 columns) */
   .hud{
-    gap: 6px;                       /* tighter */
+    display:grid;
+    grid-template-columns: repeat(2, max-content);
+    grid-auto-rows: auto;
+    gap: 6px 8px;
+    justify-content: end;
+    align-content: center;
   }
 
   .hudItem{
-    padding: 5px 8px;               /* smaller pills */
+    padding: 5px 8px;
     gap: 6px;
   }
 
   .hudItem .k,
   .hudItem .v{
-    font-size: 11px;                /* tighter text */
+    font-size: 11px;
   }
 
-  /* Keep canvas + controls from pushing content too far down */
-  .stage{
-    padding: 10px;
-    gap: 8px;
+  /* Hide extra HUD chips so it's always 2 lines */
+  .hideMobile{ display:none !important; }
+
+  /* Canvas sizing: keep comfortable */
+  .canvasWrap{
+    height: min(62vh, 640px);
   }
 
-  /* 1) Double size for FIRE button (compared to others) */
-  .actions{
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-auto-rows: auto;
+  /* Controls as 3-column grid: FIRE | actions | pad */
+  .mobileControls{
+    width:min(92vw, 460px);
+    display:grid;
+    grid-template-columns: 1.2fr 0.9fr 1.2fr;
+    grid-template-areas: "fire mid pad";
+    gap: 12px;
+    align-items:center;
+  }
+
+  /* FIRE left big */
+  #btnFire{
+    grid-area: fire;
+    width: 100%;
+    height: 96px;
+    font-size: 18px;
+    border-radius: 18px;
+  }
+
+  /* Focus/Pause middle stacked */
+  .actionsMid{
+    grid-area: mid;
+    display:flex;
+    flex-direction:column;
     gap: 10px;
   }
 
-  #btnFire{
-    grid-column: 1 / span 2;        /* FIRE takes full row */
-    height: 104px;                  /* ~2x */
-    font-size: 18px;                /* larger label */
-    border-radius: 20px;
+  #btnFocus, #btnPause{
+    width: 100%;
+    height: 44px;
+    font-size: 12px;
+    border-radius: 14px;
   }
 
-  /* Keep Focus/Pause normal size */
-  #btnFocus,
-  #btnPause{
-    height: 52px;
-    font-size: 14px;
-    border-radius: 16px;
+  /* Joystick right */
+  .pad{
+    grid-area: pad;
+    width: 120px;
+    height: 120px;
+    justify-self: end;
   }
 }
-
