@@ -12,7 +12,7 @@
   // =========================
   const LANG_KEY = "airfighter_lang";
   const saved = localStorage.getItem(LANG_KEY);
-  let LANG = (saved === "EN" || saved === "TC") ? saved : "TC"; // ✅ default TC
+  let LANG = (saved === "EN" || saved === "TC") ? saved : "TC"; // default TC
 
   const I18N = {
     EN: {
@@ -277,11 +277,11 @@
     shootMissile(pan=0){ beep({type:"square", f:260, f2:180, t:0.09, g:0.10, release:0.10, pan}); },
     hit(){ beep({type:"square", f:160, f2:90, t:0.08, g:0.18, release:0.12}); },
 
-    // ✅ death explosion sound (layered quick booms)
+    // death explosion sound (layered quick booms)
     deathBoom(){
-      beep({type:"sawtooth", f:180, f2:60, t:0.16, g:0.26, release:0.22});
-      setTimeout(() => beep({type:"square", f:120, f2:45, t:0.14, g:0.22, release:0.20}), 60);
-      setTimeout(() => beep({type:"triangle", f:90, f2:55, t:0.12, g:0.18, release:0.18}), 120);
+      beep({type:"sawtooth", f:180, f2:60, t:0.16, g:0.30, release:0.24});
+      setTimeout(() => beep({type:"square", f:120, f2:45, t:0.14, g:0.26, release:0.22}), 60);
+      setTimeout(() => beep({type:"triangle", f:90, f2:55, t:0.12, g:0.22, release:0.20}), 120);
     },
 
     pickup(){ beep({type:"triangle", f:820, f2:1150, t:0.08, g:0.14, release:0.10}); },
@@ -407,8 +407,20 @@
     abortFrame: false,
     bgScroll: 0,
 
-    // ✅ explosion particles
+    // FX (explosion)
     fx: [],
+
+    // ✅ NEW: screen flash (white)
+    flash: 0,
+
+    // ✅ NEW: slow-motion window on death
+    deathSlow: 0,
+
+    // ✅ NEW: death sequence timer (0.2s)
+    deathSeq: 0,
+
+    // ✅ NEW: shield expand animation [0..1]
+    shieldAnim: 0,
   };
 
   const player = {
@@ -429,6 +441,9 @@
     weaponHeat: 0,
     missileCooldown: 0,
     fireRateLevel: 0,
+
+    // ✅ NEW: hide while in death slow-mo
+    deadHidden: false,
   };
 
   const bullets = [];
@@ -447,41 +462,39 @@
   // FX (Explosion)
   // =========================
   function spawnExplosion(x, y, power=1){
-    // ring flash
-    state.fx.push({ kind:"flash", x, y, t:0, life:0.28, r0: 10, r1: 70*power });
+    state.fx.push({ kind:"flash", x, y, t:0, life:0.32, r0: 10, r1: 85*power });
 
-    const n = Math.floor(34 * power);
+    const n = Math.floor(46 * power);
     for (let i=0;i<n;i++){
       const a = Math.random()*Math.PI*2;
-      const sp = rand(120, 520) * power;
+      const sp = rand(150, 640) * power;
       state.fx.push({
         kind:"spark",
         x, y,
         vx: Math.cos(a)*sp,
         vy: Math.sin(a)*sp,
         t:0,
-        life: rand(0.35, 0.75),
-        r: rand(1.2, 3.2),
+        life: rand(0.45, 0.95),
+        r: rand(1.4, 3.8),
         hue: chance(0.5) ? "rgba(34,211,238," : "rgba(47,91,255,"
       });
     }
 
-    // debris
-    const m = Math.floor(10 * power);
+    const m = Math.floor(14 * power);
     for (let i=0;i<m;i++){
       const a = Math.random()*Math.PI*2;
-      const sp = rand(80, 300) * power;
+      const sp = rand(110, 380) * power;
       state.fx.push({
         kind:"debris",
         x, y,
         vx: Math.cos(a)*sp,
         vy: Math.sin(a)*sp,
         rot: rand(0, Math.PI*2),
-        vr: rand(-9,9),
+        vr: rand(-11,11),
         t:0,
-        life: rand(0.45, 0.9),
-        w: rand(3,6),
-        h: rand(2,5),
+        life: rand(0.55, 1.05),
+        w: rand(3,7),
+        h: rand(2,6),
       });
     }
   }
@@ -509,13 +522,18 @@
     state.bgScroll = 0;
     state.fx.length = 0;
 
+    state.flash = 0;
+    state.deathSlow = 0;
+    state.deathSeq = 0;
+    state.shieldAnim = 0;
+
     player.x = W/2;
     player.y = H*0.78;
     player.hp = 10;
     player.lives = 3;
 
-    // ✅ start invincible a bit
     player.invuln = 1.2;
+    player.deadHidden = false;
 
     player.weaponTier = 0;
     player.weaponHeat = 0;
@@ -603,7 +621,10 @@
       state.scene += 1;
       state.phase = "wave";
       state.waveStartTime = state.t;
+
       player.invuln = 1.0;
+      state.shieldAnim = 0;
+
       showToast(T().toast.sceneNow(state.scene, sceneName(state.scene)));
     } else {
       openOverlay(
@@ -718,13 +739,32 @@
   }
 
   // =========================
-  // Damage / Life
+  // Damage / Life — NEW death sequence
   // =========================
-  function loseLife(){
-    // ✅ death FX + sound
-    spawnExplosion(player.x, player.y, 1.25);
+  function startDeathSequence(){
+    if (state.deathSeq > 0) return;
+
+    // explode + sound
+    spawnExplosion(player.x, player.y, 1.40);
     playSfx.deathBoom();
 
+    // ✅ screen white flash + stronger shake
+    state.flash = 1.0;
+    state.shake = Math.max(state.shake, 1.15);
+
+    // ✅ 0.2s slow motion
+    state.deathSlow = 0.20;
+    state.deathSeq  = 0.20;
+
+    // temporarily hide the ship for drama
+    player.deadHidden = true;
+
+    // block further damage during the sequence
+    player.invuln = 999;
+    firing = false;
+  }
+
+  function finalizeDeath(){
     player.lives -= 1;
 
     state.luck = Math.min(3.5, state.luck + 0.45);
@@ -735,14 +775,19 @@
     player.weaponHeat = 0;
     player.missileCooldown = 0;
 
-    state.abortFrame = true;
-    state.shake = 0.65;
+    // clear bullets after the slow-mo ends (so you actually "see" it)
+    bullets.length = 0;
+    enemyBullets.length = 0;
 
     if (player.lives > 0){
       player.hp = player.hpMax;
 
-      // ✅ respawn invincible 10 seconds
+      // ✅ respawn: 10 seconds invincible + shield animation
       player.invuln = 10.0;
+      state.shieldAnim = 0;
+
+      // bring ship back
+      player.deadHidden = false;
 
       showToast(T().toast.lifeLost(state.luck.toFixed(2)));
     } else {
@@ -759,12 +804,17 @@
   }
 
   function hitPlayer(dmg){
-    if (player.invuln > 0) return;
+    // ignore hits while invulnerable OR death sequence
+    if (player.invuln > 0 || state.deathSeq > 0) return;
+
     player.hp -= dmg;
-    state.shake = Math.min(0.65, state.shake + 0.10);
+    state.shake = Math.min(0.95, state.shake + 0.12);
     player.invuln = 0.24;
     playSfx.hit();
-    if (player.hp <= 0) loseLife();
+
+    if (player.hp <= 0){
+      startDeathSequence();
+    }
   }
 
   // =========================
@@ -854,7 +904,7 @@
   btnRestart.addEventListener("click", () => { ensureAudio(); closeOverlay(); resetForNewRun(); state.running=true; state.paused=false; last=0; requestAnimationFrame(tick); });
 
   // =========================
-  // Help popup (mini-icons drawn on canvas)
+  // Help popup (mini-icons drawn on canvas) — unchanged
   // =========================
   function roundRect(c, x, y, w, h, r){
     c.beginPath();
@@ -906,7 +956,6 @@
       c.globalAlpha = 1;
       return;
     }
-
     if (kind === "spread"){
       c.fillStyle = col;
       c.beginPath(); c.arc(x+10, y+18, 3, 0, Math.PI*2); c.fill();
@@ -914,7 +963,6 @@
       c.beginPath(); c.arc(x+18, y+18, 3, 0, Math.PI*2); c.fill();
       return;
     }
-
     if (kind === "missile"){
       c.fillStyle = col;
       c.beginPath(); c.arc(x+14, y+18, 4, 0, Math.PI*2); c.fill();
@@ -924,7 +972,6 @@
       c.globalAlpha = 1;
       return;
     }
-
     c.fillStyle = col;
     c.beginPath(); c.arc(x+14, y+18, 4, 0, Math.PI*2); c.fill();
   }
@@ -1031,40 +1078,65 @@
   // Update loop
   // =========================
   function update(dt){
-    state.abortFrame = false;
+    // timers (real time)
     state.t += dt;
+    state.flash = Math.max(0, state.flash - dt * 4.8);
+    state.deathSlow = Math.max(0, state.deathSlow - dt);
 
-    const dtWorld = dt * (focus ? 0.20 : 1.0);
+    // slow-mo factor (only during death window)
+    const slowFactor = (state.deathSlow > 0) ? 0.16 : 1.0;
+
+    // Focus factor + death slow-mo
+    const dtWorld = dt * (focus ? 0.20 : 1.0) * slowFactor;
+
+    // death sequence countdown in WORLD time? (we want real 0.2s feel) -> use real dt
+    if (state.deathSeq > 0){
+      state.deathSeq = Math.max(0, state.deathSeq - dt);
+      if (state.deathSeq === 0){
+        finalizeDeath();
+      }
+    }
 
     const bgSpeed = 220;
     state.bgScroll = (state.bgScroll + bgSpeed * dtWorld) % 100000;
 
-    state.shake = Math.max(0, state.shake - dt * 1.6);
+    state.shake = Math.max(0, state.shake - dt * 1.8);
     state.dropBoost = Math.max(0, state.dropBoost - dt * 0.08);
 
-    // player
-    let mx=0,my=0;
-    if (keys.has("ArrowLeft") || keys.has("KeyA")) mx -= 1;
-    if (keys.has("ArrowRight")|| keys.has("KeyD")) mx += 1;
-    if (keys.has("ArrowUp")   || keys.has("KeyW")) my -= 1;
-    if (keys.has("ArrowDown") || keys.has("KeyS")) my += 1;
-    mx += joy.x; my += joy.y;
+    // shield animation progresses while invulnerable
+    if (player.invuln > 0 && state.shieldAnim < 1){
+      // quick expand in first ~0.55s (use real dt for stable feel)
+      state.shieldAnim = clamp(state.shieldAnim + dt / 0.55, 0, 1);
+    }
 
-    const mag = Math.hypot(mx,my) || 1;
-    if (mag > 1){ mx/=mag; my/=mag; }
+    // player (disable movement when dying)
+    if (state.deathSeq <= 0){
+      let mx=0,my=0;
+      if (keys.has("ArrowLeft") || keys.has("KeyA")) mx -= 1;
+      if (keys.has("ArrowRight")|| keys.has("KeyD")) mx += 1;
+      if (keys.has("ArrowUp")   || keys.has("KeyW")) my -= 1;
+      if (keys.has("ArrowDown") || keys.has("KeyS")) my += 1;
+      mx += joy.x; my += joy.y;
 
-    const spd = player.spd * (focus ? 0.40 : 1.0);
+      const mag = Math.hypot(mx,my) || 1;
+      if (mag > 1){ mx/=mag; my/=mag; }
 
-    player.x += mx * spd * dt;
-    player.y += my * spd * dt;
-    player.x = clamp(player.x, 24, W-24);
-    player.y = clamp(player.y, 56, H-24);
+      const spd = player.spd * (focus ? 0.40 : 1.0);
 
+      player.x += mx * spd * dt;
+      player.y += my * spd * dt;
+      player.x = clamp(player.x, 24, W-24);
+      player.y = clamp(player.y, 56, H-24);
+    }
+
+    // invuln reduces in WORLD time (so focus mode doesn't "cheat" invuln duration)
     player.invuln = Math.max(0, player.invuln - dtWorld);
+
     player.weaponHeat = Math.max(0, player.weaponHeat - dtWorld);
     player.missileCooldown = Math.max(0, player.missileCooldown - dtWorld);
 
-    if (firing) shoot();
+    // shooting disabled while dying
+    if (firing && state.deathSeq <= 0) shoot();
 
     const cfg = sceneConfig[state.scene];
     const baseWave = (26 + state.scene * 4);
@@ -1280,7 +1352,6 @@
       if (circleHit(b.x, b.y, b.r, player.x, player.y, player.r-2)){
         enemyBullets.splice(i, 1);
         hitPlayer(b.dmg);
-        if (state.abortFrame) break;
         continue;
       }
 
@@ -1328,9 +1399,7 @@
       if (f.kind === "spark" || f.kind === "debris"){
         f.x += f.vx * dtWorld;
         f.y += f.vy * dtWorld;
-        // gravity
-        f.vy += 520 * dtWorld;
-        // drag
+        f.vy += 560 * dtWorld;
         f.vx *= Math.pow(0.30, dtWorld);
         f.vy *= Math.pow(0.35, dtWorld);
         if (f.kind === "debris"){
@@ -1340,13 +1409,7 @@
       if (f.t >= f.life) state.fx.splice(i,1);
     }
 
-    if (state.abortFrame){
-      enemyBullets.length = 0;
-      enemies.forEach(e => e.shootCD += 0.8);
-      state.abortFrame = false;
-    }
-
-    // HUD values
+    // HUD
     hudScene.textContent = String(state.scene);
     hudLives.textContent = String(player.lives);
     hudHP.textContent = `${clamp(Math.ceil(player.hp),0,player.hpMax)}/${player.hpMax}`;
@@ -1357,12 +1420,12 @@
   }
 
   // =========================
-  // Draw
+  // Drawing
   // =========================
   function draw(){
     ctx.clearRect(0,0,W,H);
     drawFlyingBackground();
-    drawFX();          // ✅ explosion visuals
+    drawFX();
     drawDrops();
     drawEnemies();
     drawBoss();
@@ -1370,6 +1433,14 @@
     drawEnemyBullets();
     drawPlayer();
     drawCanvasHP();
+
+    // ✅ Screen flash (white overlay)
+    if (state.flash > 0){
+      ctx.globalAlpha = clamp(state.flash, 0, 1) * 0.85;
+      ctx.fillStyle = "rgba(255,255,255,1)";
+      ctx.fillRect(0,0,W,H);
+      ctx.globalAlpha = 1;
+    }
   }
 
   function drawFlyingBackground(){
@@ -1428,8 +1499,8 @@
         const r = lerp(f.r0, f.r1, p);
         ctx.globalAlpha = (1 - p) * 0.55;
         const grad = ctx.createRadialGradient(f.x, f.y, 2, f.x, f.y, r);
-        grad.addColorStop(0, "rgba(255,255,255,0.9)");
-        grad.addColorStop(0.35, "rgba(34,211,238,0.35)");
+        grad.addColorStop(0, "rgba(255,255,255,0.92)");
+        grad.addColorStop(0.35, "rgba(34,211,238,0.40)");
         grad.addColorStop(1, "rgba(255,255,255,0)");
         ctx.fillStyle = grad;
         ctx.beginPath();
@@ -1456,64 +1527,6 @@
     }
   }
 
-  function drawPlayer(){
-    const inv = player.invuln > 0;
-
-    // ✅ invincible blink + subtle glow
-    if (inv && Math.floor(state.t*18) % 2 === 0) ctx.globalAlpha = 0.55;
-
-    ctx.save();
-    ctx.translate(player.x, player.y);
-
-    if (inv){
-      ctx.globalAlpha = 0.35;
-      ctx.strokeStyle = "rgba(34,211,238,0.95)";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(0, 0, 26, 0, Math.PI*2);
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-    }
-
-    ctx.globalAlpha = 0.45;
-    ctx.fillStyle = "rgba(34,211,238,1)";
-    ctx.beginPath();
-    ctx.ellipse(0, 18, 7, 14, 0, 0, Math.PI*2);
-    ctx.fill();
-
-    ctx.globalAlpha = 1;
-    const body = ctx.createLinearGradient(-18, -18, 18, 18);
-    body.addColorStop(0, "rgba(47,91,255,1)");
-    body.addColorStop(1, "rgba(34,211,238,1)");
-    ctx.fillStyle = body;
-
-    ctx.beginPath();
-    ctx.moveTo(0, -22);
-    ctx.lineTo(16, 14);
-    ctx.lineTo(0, 8);
-    ctx.lineTo(-16, 14);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.fillStyle = "rgba(255,255,255,0.85)";
-    ctx.beginPath();
-    ctx.ellipse(0, -4, 6, 10, 0, 0, Math.PI*2);
-    ctx.fill();
-
-    if (focus){
-      ctx.globalAlpha = 0.28;
-      ctx.strokeStyle = "rgba(0,0,0,0.65)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(0, 0, 24, 0, Math.PI*2);
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-    }
-
-    ctx.restore();
-    ctx.globalAlpha = 1;
-  }
-
   function roundRectDraw(c, x, y, w, h, r){
     c.beginPath();
     c.moveTo(x+r, y);
@@ -1526,6 +1539,88 @@
     c.lineTo(x, y+r);
     c.quadraticCurveTo(x, y, x+r, y);
     c.closePath();
+  }
+
+  // ✅ Player: invuln => gold + shield expand animation
+  function drawPlayer(){
+    if (player.deadHidden) return;
+
+    const inv = player.invuln > 0;
+
+    // invincible blink (subtle)
+    if (inv && Math.floor(state.t*18) % 2 === 0) ctx.globalAlpha = 0.75;
+
+    ctx.save();
+    ctx.translate(player.x, player.y);
+
+    // shield expand animation (first 0.55s)
+    if (inv){
+      const p = state.shieldAnim;
+      const r = lerp(10, 34, p);
+      const a = (1 - p) * 0.45 + 0.15;
+      ctx.globalAlpha = a;
+      ctx.strokeStyle = "rgba(34,211,238,0.98)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI*2);
+      ctx.stroke();
+
+      // inner shimmer ring
+      ctx.globalAlpha = a * 0.55;
+      ctx.strokeStyle = "rgba(255,255,255,0.95)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.72, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    // thruster
+    ctx.globalAlpha = 0.45;
+    ctx.fillStyle = inv ? "rgba(245,158,11,1)" : "rgba(34,211,238,1)";
+    ctx.beginPath();
+    ctx.ellipse(0, 18, 7, 14, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    // body (gold during invuln)
+    ctx.globalAlpha = 1;
+    const body = ctx.createLinearGradient(-18, -18, 18, 18);
+    if (inv){
+      body.addColorStop(0, "rgba(255,215,102,1)");
+      body.addColorStop(1, "rgba(245,158,11,1)");
+    } else {
+      body.addColorStop(0, "rgba(47,91,255,1)");
+      body.addColorStop(1, "rgba(34,211,238,1)");
+    }
+    ctx.fillStyle = body;
+
+    ctx.beginPath();
+    ctx.moveTo(0, -22);
+    ctx.lineTo(16, 14);
+    ctx.lineTo(0, 8);
+    ctx.lineTo(-16, 14);
+    ctx.closePath();
+    ctx.fill();
+
+    // cockpit
+    ctx.fillStyle = inv ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.85)";
+    ctx.beginPath();
+    ctx.ellipse(0, -4, 6, 10, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    // focus ring
+    if (focus){
+      ctx.globalAlpha = 0.28;
+      ctx.strokeStyle = "rgba(0,0,0,0.65)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, 24, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.restore();
+    ctx.globalAlpha = 1;
   }
 
   function drawEnemies(){
@@ -1705,10 +1800,9 @@
     ctx.fillText(`${hpLabel} ${Math.ceil(player.hp)}/${player.hpMax}`, x + 10, y + h/2);
     ctx.fillText(`♥ x${player.lives}   ${fireLabel} ${FIRE_RATE_LABEL[player.fireRateLevel]}`, x + w + 12, y + h/2);
 
-    // ✅ show invincible countdown when long
-    if (player.invuln > 1.0){
+    if (player.invuln > 1.0 && player.invuln < 900){
       ctx.textAlign = "right";
-      ctx.fillStyle = "rgba(34,211,238,0.95)";
+      ctx.fillStyle = "rgba(245,158,11,0.95)";
       const sec = Math.ceil(player.invuln);
       ctx.fillText((LANG === "EN") ? `INV ${sec}s` : `無敵 ${sec}s`, W - 12, y + h/2);
       ctx.textAlign = "left";
@@ -1716,6 +1810,41 @@
 
     ctx.globalAlpha = 1;
   }
+
+  // =========================
+  // Boss / Win etc (unchanged)
+  // =========================
+  function fireEnemyBulletGuarded(...args){
+    fireEnemyBullet(...args);
+  }
+
+  // =========================
+  // Pause UI
+  // =========================
+  function openOverlay(title, html, opts={}){
+    overlayTitle.textContent = title;
+    overlayText.innerHTML = html;
+    btnPrimary.textContent = opts.primary ?? T().buttons.start;
+    btnResume.style.display  = opts.showResume ? "inline-flex" : "none";
+    btnRestart.style.display = opts.showRestart ? "inline-flex" : "none";
+    overlay.style.display = "flex";
+  }
+  function closeOverlay(){ overlay.style.display = "none"; }
+
+  function openPausedOverlay(){
+    openOverlay(T().pausedTitle, T().pausedText, {
+      showResume:true, showRestart:true, primary:T().buttons.how
+    });
+  }
+
+  // =========================
+  // Scenes / Boss / bullets firing support
+  // =========================
+  function fireCooldown(multBase){
+    return multBase * FIRE_RATE_MULT[player.fireRateLevel];
+  }
+
+  // (the rest of shoot / weapon / boss logic already defined above)
 
   // =========================
   // Main loop
@@ -1735,8 +1864,40 @@
     last = ts;
 
     update(dt);
-    draw();
+
+    // camera shake
+    if (state.shake > 0){
+      const s = state.shake;
+      const dx = (Math.random()*2 - 1) * 10 * s;
+      const dy = (Math.random()*2 - 1) * 10 * s;
+      ctx.save();
+      ctx.translate(dx, dy);
+      draw();
+      ctx.restore();
+    } else {
+      draw();
+    }
+
     requestAnimationFrame(tick);
+  }
+
+  // =========================
+  // Overlay / Start / Pause wiring
+  // =========================
+  function openHelp(){ /* overridden earlier; keep */ }
+
+  function togglePause(){
+    if (!state.running) return;
+    state.paused = !state.paused;
+    if (state.paused){
+      firing = false;
+      openPausedOverlay();
+      playSfx.pause();
+    } else {
+      closeOverlay();
+      playSfx.resume();
+      last = 0;
+    }
   }
 
   // =========================
@@ -1757,4 +1918,24 @@
   setSfxEnabled(true);
   applyLang();
   showStartOverlay();
+
+  // =========================
+  // Start button already wired above
+  // =========================
+  btnPrimary.addEventListener("click", () => {
+    ensureAudio();
+    if (!state.running){
+      closeOverlay();
+      resetForNewRun();
+      state.running = true;
+      state.paused = false;
+      last = 0;
+      requestAnimationFrame(tick);
+    }
+  });
+
+  btnResume.addEventListener("click", () => { ensureAudio(); if (state.paused) togglePause(); });
+  btnRestart.addEventListener("click", () => { ensureAudio(); closeOverlay(); resetForNewRun(); state.running=true; state.paused=false; last=0; requestAnimationFrame(tick); });
+
+  // Help button is wired above (openHelp)
 })();
