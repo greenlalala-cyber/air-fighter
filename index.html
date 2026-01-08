@@ -12,25 +12,54 @@
       <div class="brand">
         <div class="dot"></div>
         <div class="title">
-          <div class="name">NEON VANGUARD</div>
-          <div class="sub">3 scenes • upgrades • bosses</div>
+          <div class="name" id="brandName">NEON VANGUARD</div>
+          <div class="sub" id="brandSub">3 scenes • upgrades • bosses</div>
         </div>
       </div>
 
-      <!-- HUD order optimized for mobile 2-line layout -->
+      <!-- HUD order optimized for mobile 2-line layout:
+           Row1: Scene / Lives / HP
+           Row2: Weapon / EN-TC / ?  -->
       <div class="hud">
-        <div class="hudItem"><span class="k">Scene</span><span id="hudScene" class="v">1</span></div>
-        <div class="hudItem"><span class="k">Lives</span><span id="hudLives" class="v">3</span></div>
-        <div class="hudItem"><span class="k">HP</span><span id="hudHP" class="v">10/10</span></div>
-        <div class="hudItem"><span class="k">Weapon</span><span id="hudWeapon" class="v">Basic</span></div>
+        <div class="hudItem">
+          <span class="k" id="lblScene">Scene</span>
+          <span id="hudScene" class="v">1</span>
+        </div>
 
-        <!-- Hidden on mobile (HUD stays 2 lines) -->
-        <div class="hudItem hideMobile"><span class="k">Fire</span><span id="hudFire" class="v">I</span></div>
-        <div class="hudItem hideMobile"><span class="k">Luck</span><span id="hudLuck" class="v">x1.00</span></div>
-        <div class="hudItem hideMobile"><span class="k">SFX</span><span id="hudSfx" class="v">ON</span></div>
+        <div class="hudItem">
+          <span class="k" id="lblLives">Lives</span>
+          <span id="hudLives" class="v">3</span>
+        </div>
+
+        <div class="hudItem">
+          <span class="k" id="lblHP">HP</span>
+          <span id="hudHP" class="v">10/10</span>
+        </div>
+
+        <div class="hudItem">
+          <span class="k" id="lblWeapon">Weapon</span>
+          <span id="hudWeapon" class="v">Basic</span>
+        </div>
+
+        <!-- Language toggle -->
+        <button id="btnLang" class="hudBtn hudLang" type="button" aria-label="Language">EN</button>
 
         <!-- Help button -->
         <button id="btnHelp" class="hudBtn" type="button" aria-label="Help">?</button>
+
+        <!-- Hidden on mobile (keeps HUD exactly 2 rows) -->
+        <div class="hudItem hideMobile">
+          <span class="k" id="lblFire">Fire</span>
+          <span id="hudFire" class="v">I</span>
+        </div>
+        <div class="hudItem hideMobile">
+          <span class="k" id="lblLuck">Luck</span>
+          <span id="hudLuck" class="v">x1.00</span>
+        </div>
+        <div class="hudItem hideMobile">
+          <span class="k" id="lblSfx">SFX</span>
+          <span id="hudSfx" class="v">ON</span>
+        </div>
       </div>
     </header>
 
@@ -41,12 +70,7 @@
         <div id="overlay" class="overlay">
           <div class="panel">
             <div class="panelTitle" id="overlayTitle">NEON VANGUARD</div>
-            <div class="panelText" id="overlayText">
-              Move: <b>WASD / Arrow Keys</b><br/>
-              Shoot: <b>Space</b> (auto-fire) • Focus: <b>Shift</b> • Pause: <b>P</b> / <b>Esc</b><br/><br/>
-              <b>Items:</b> ▲ Weapon • ✚ Potion • ⚡ Fire Rate • ✦ Life Up (rare)<br/>
-              Lose a life → weapon + fire rate reset to base.
-            </div>
+            <div class="panelText" id="overlayText"></div>
 
             <div class="panelBtns">
               <button id="btnPrimary" class="btn primary">Start</button>
@@ -58,7 +82,7 @@
               <button id="btnRestart" class="btn" style="display:none;">Restart</button>
             </div>
 
-            <div class="tiny">
+            <div class="tiny" id="overlayTip">
               Tip: Focus slows time heavily for precision dodging.
             </div>
           </div>
@@ -84,7 +108,7 @@
     </main>
 
     <footer class="footer">
-      <div class="hint">
+      <div class="hint" id="footerHint">
         GitHub Pages: Settings → Pages → Deploy from branch → <b>main</b> / <b>root</b>.
       </div>
     </footer>
