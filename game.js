@@ -8,10 +8,11 @@
   const chance = (p) => Math.random() < p;
 
   // =========================
-  // Language (EN / TC) — FIXED
+  // Language (EN / TC) — default TC
   // =========================
   const LANG_KEY = "airfighter_lang";
-  let LANG = (localStorage.getItem(LANG_KEY) === "TC") ? "TC" : "EN";
+  const saved = localStorage.getItem(LANG_KEY);
+  let LANG = (saved === "EN" || saved === "TC") ? saved : "TC"; // ✅ default TC
 
   const I18N = {
     EN: {
@@ -23,7 +24,6 @@
       sfxOn:"SFX: ON", sfxOff:"SFX: OFF",
       sfxHudOn:"ON", sfxHudOff:"OFF",
       tip:"Tip: Focus slows time heavily for precision dodging.",
-      footer:'GitHub Pages: Settings → Pages → Deploy from branch → <b>main</b> / <b>root</b>.',
       overlayStart: `Move: <b>WASD / Arrow Keys</b><br/>
                     Shoot: <b>Space</b> (auto-fire) • Focus: <b>Shift</b> • Pause: <b>P</b> / <b>Esc</b><br/><br/>
                     <b>Items:</b> ▲ Weapon • ✚ Potion • ⚡ Fire Rate • ✦ Life Up (rare)<br/>
@@ -58,7 +58,7 @@
         fireMax:"+1 HP",
         lifeUp:"RARE: +1 Life!",
         lifeMax:"Life is max",
-        lifeLost:(luck)=>`Life lost! Power reset. Luck x${luck}`,
+        lifeLost:(luck)=>`Life lost! Power reset. Invincible 10s. Luck x${luck}`,
         gameOver:"Game Over",
         sfxOn:"SFX enabled",
         sfxOff:"SFX muted",
@@ -74,7 +74,6 @@
       sfxOn:"音效：開", sfxOff:"音效：關",
       sfxHudOn:"開", sfxHudOff:"關",
       tip:"提示：精準模式會大幅減速，方便閃躲。",
-      footer:'GitHub Pages：設定 → Pages → 從分支部署 → <b>main</b> / <b>root</b>。',
       overlayStart: `移動：<b>WASD / 方向鍵</b><br/>
                     射擊：<b>Space</b>（自動連射） • 精準：<b>Shift</b> • 暫停：<b>P</b> / <b>Esc</b><br/><br/>
                     <b>道具：</b> ▲ 武器 • ✚ 藥水 • ⚡ 射速 • ✦ 生命 +1（稀有）<br/>
@@ -109,7 +108,7 @@
         fireMax:"血量 +1",
         lifeUp:"稀有：生命 +1！",
         lifeMax:"生命已達上限",
-        lifeLost:(luck)=>`失去一命！能力重置。幸運 x${luck}`,
+        lifeLost:(luck)=>`失去一命！能力重置。重生無敵 10 秒。幸運 x${luck}`,
         gameOver:"遊戲結束",
         sfxOn:"音效已開啟",
         sfxOff:"音效已靜音",
@@ -159,7 +158,6 @@
 
   const brandName = document.getElementById("brandName");
   const brandSub  = document.getElementById("brandSub");
-  const footerHint= document.getElementById("footerHint");
   const overlayTip= document.getElementById("overlayTip");
 
   const btnHelp   = document.getElementById("btnHelp");
@@ -179,19 +177,16 @@
   const btnPause = document.getElementById("btnPause");
 
   function T(){ return I18N[LANG]; }
-
   function sceneName(n){ return SCENES[n]?.[LANG] ?? SCENES[n]?.EN ?? `Scene ${n}`; }
   function weaponName(tier){ return WEAPONS[tier]?.name?.[LANG] ?? WEAPONS[tier]?.name?.EN ?? "Basic"; }
 
   function applyLang(){
     const t = T();
 
-    // Titles
     document.title = t.title;
     brandName.textContent = t.title;
     overlayTitle.textContent = t.title;
 
-    // HUD labels
     lblScene.textContent  = t.hud.scene;
     lblLives.textContent  = t.hud.lives;
     lblHP.textContent     = t.hud.hp;
@@ -201,21 +196,17 @@
     if (lblSfx)  lblSfx.textContent  = t.hud.sfx;
 
     brandSub.textContent = t.brandSub;
-    footerHint.innerHTML = t.footer;
     overlayTip.textContent = t.tip;
 
-    // Buttons
     btnPrimary.textContent = t.buttons.start;
     btnResume.textContent  = t.buttons.resume;
     btnRestart.textContent = t.buttons.restart;
     btnSound.textContent   = (SFX.enabled ? t.sfxOn : t.sfxOff);
 
-    // Mobile labels
     btnFire.textContent  = t.mobile.fire;
     btnFocus.textContent = t.mobile.focus;
     btnPause.textContent = t.mobile.pause;
 
-    // Lang pill
     btnLang.textContent = LANG;
     btnLang.setAttribute("aria-label", LANG === "EN" ? "Switch to Traditional Chinese" : "切換為英文");
   }
@@ -285,11 +276,18 @@
     shootLaser(pan=0){ beep({type:"sawtooth", f:900, f2:580, t:0.06, g:0.08, release:0.08, pan}); },
     shootMissile(pan=0){ beep({type:"square", f:260, f2:180, t:0.09, g:0.10, release:0.10, pan}); },
     hit(){ beep({type:"square", f:160, f2:90, t:0.08, g:0.18, release:0.12}); },
+
+    // ✅ death explosion sound (layered quick booms)
+    deathBoom(){
+      beep({type:"sawtooth", f:180, f2:60, t:0.16, g:0.26, release:0.22});
+      setTimeout(() => beep({type:"square", f:120, f2:45, t:0.14, g:0.22, release:0.20}), 60);
+      setTimeout(() => beep({type:"triangle", f:90, f2:55, t:0.12, g:0.18, release:0.18}), 120);
+    },
+
     pickup(){ beep({type:"triangle", f:820, f2:1150, t:0.08, g:0.14, release:0.10}); },
     lifeUp(){ beep({type:"sine", f:520, f2:840, t:0.12, g:0.16, release:0.14}); },
     pause(){ beep({type:"triangle", f:520, f2:420, t:0.06, g:0.12, release:0.08}); },
     resume(){ beep({type:"triangle", f:420, f2:520, t:0.06, g:0.12, release:0.08}); },
-    lifeLost(){ beep({type:"sawtooth", f:210, f2:70, t:0.12, g:0.22, release:0.18}); },
     bossDown(){ beep({type:"sine", f:220, f2:440, t:0.18, g:0.20, release:0.20}); },
   };
 
@@ -327,7 +325,7 @@
   updatePadRect();
 
   function setStick(nx, ny){
-    const r = 42; // slightly snappier stick travel
+    const r = 42;
     padStick.style.transform = `translate(${nx * r}px, ${ny * r}px)`;
   }
 
@@ -340,12 +338,10 @@
     const maxR = padRect.width * 0.33;
     const mag = Math.hypot(dx, dy) || 1;
 
-    // a bit more responsive near center
     let nx = clamp(dx / maxR, -1, 1);
     let ny = clamp(dy / maxR, -1, 1);
     const cMag = Math.min(1, mag / maxR);
 
-    // response curve (less sluggish)
     const curve = 0.85;
     nx = Math.sign(nx) * Math.pow(Math.abs(nx), curve);
     ny = Math.sign(ny) * Math.pow(Math.abs(ny), curve);
@@ -375,14 +371,12 @@
 
   btnPause.addEventListener("click", () => { ensureAudio(); togglePause(); });
 
-  // ✅ Language toggle (reliable) + persist
   btnLang.addEventListener("click", (e) => {
     e.stopPropagation();
     ensureAudio();
     LANG = (LANG === "EN") ? "TC" : "EN";
     localStorage.setItem(LANG_KEY, LANG);
     applyLang();
-    // refresh overlay content if visible
     if (overlay.style.display !== "none"){
       if (!state.running){
         showStartOverlay();
@@ -412,6 +406,9 @@
     waveStartTime: 0,
     abortFrame: false,
     bgScroll: 0,
+
+    // ✅ explosion particles
+    fx: [],
   };
 
   const player = {
@@ -419,13 +416,13 @@
     y: H*0.78,
     r: 14,
 
-    // ✅ more responsive + a bit faster
     spd: 305,
 
     hp: 10,
     hpMax: 10,
     lives: 3,
     livesMax: 6,
+
     invuln: 0,
 
     weaponTier: 0,
@@ -440,12 +437,54 @@
   const drops = [];
   let boss = null;
 
-  // ✅ 1) Reduce enemy bullet rate (lower fire mult = longer cooldown)
   const sceneConfig = {
     1: { enemyRate:0.90, baseEnemyHP:9,  bulletSpeed:150, bossHP:430, enemyFireMult:0.52, bossFireMult:0.56 },
     2: { enemyRate:0.70, baseEnemyHP:12, bulletSpeed:180, bossHP:650, enemyFireMult:0.72, bossFireMult:0.78 },
     3: { enemyRate:0.82, baseEnemyHP:15, bulletSpeed:210, bossHP:900, enemyFireMult:0.92, bossFireMult:0.96 },
   };
+
+  // =========================
+  // FX (Explosion)
+  // =========================
+  function spawnExplosion(x, y, power=1){
+    // ring flash
+    state.fx.push({ kind:"flash", x, y, t:0, life:0.28, r0: 10, r1: 70*power });
+
+    const n = Math.floor(34 * power);
+    for (let i=0;i<n;i++){
+      const a = Math.random()*Math.PI*2;
+      const sp = rand(120, 520) * power;
+      state.fx.push({
+        kind:"spark",
+        x, y,
+        vx: Math.cos(a)*sp,
+        vy: Math.sin(a)*sp,
+        t:0,
+        life: rand(0.35, 0.75),
+        r: rand(1.2, 3.2),
+        hue: chance(0.5) ? "rgba(34,211,238," : "rgba(47,91,255,"
+      });
+    }
+
+    // debris
+    const m = Math.floor(10 * power);
+    for (let i=0;i<m;i++){
+      const a = Math.random()*Math.PI*2;
+      const sp = rand(80, 300) * power;
+      state.fx.push({
+        kind:"debris",
+        x, y,
+        vx: Math.cos(a)*sp,
+        vy: Math.sin(a)*sp,
+        rot: rand(0, Math.PI*2),
+        vr: rand(-9,9),
+        t:0,
+        life: rand(0.45, 0.9),
+        w: rand(3,6),
+        h: rand(2,5),
+      });
+    }
+  }
 
   // =========================
   // Init / Reset
@@ -468,12 +507,16 @@
     state.waveStartTime = 0;
     state.abortFrame = false;
     state.bgScroll = 0;
+    state.fx.length = 0;
 
     player.x = W/2;
     player.y = H*0.78;
     player.hp = 10;
     player.lives = 3;
-    player.invuln = 1.1;
+
+    // ✅ start invincible a bit
+    player.invuln = 1.2;
+
     player.weaponTier = 0;
     player.weaponHeat = 0;
     player.missileCooldown = 0;
@@ -678,6 +721,10 @@
   // Damage / Life
   // =========================
   function loseLife(){
+    // ✅ death FX + sound
+    spawnExplosion(player.x, player.y, 1.25);
+    playSfx.deathBoom();
+
     player.lives -= 1;
 
     state.luck = Math.min(3.5, state.luck + 0.45);
@@ -689,12 +736,14 @@
     player.missileCooldown = 0;
 
     state.abortFrame = true;
-    state.shake = 0.55;
-    playSfx.lifeLost();
+    state.shake = 0.65;
 
     if (player.lives > 0){
       player.hp = player.hpMax;
-      player.invuln = 1.6;
+
+      // ✅ respawn invincible 10 seconds
+      player.invuln = 10.0;
+
       showToast(T().toast.lifeLost(state.luck.toFixed(2)));
     } else {
       openOverlay(
@@ -712,7 +761,7 @@
   function hitPlayer(dmg){
     if (player.invuln > 0) return;
     player.hp -= dmg;
-    state.shake = Math.min(0.60, state.shake + 0.08);
+    state.shake = Math.min(0.65, state.shake + 0.10);
     player.invuln = 0.24;
     playSfx.hit();
     if (player.hp <= 0) loseLife();
@@ -985,7 +1034,6 @@
     state.abortFrame = false;
     state.t += dt;
 
-    // ✅ keep focus slow, but player feels less "stuck"
     const dtWorld = dt * (focus ? 0.20 : 1.0);
 
     const bgSpeed = 220;
@@ -994,7 +1042,7 @@
     state.shake = Math.max(0, state.shake - dt * 1.6);
     state.dropBoost = Math.max(0, state.dropBoost - dt * 0.08);
 
-    // move player (more responsive + faster)
+    // player
     let mx=0,my=0;
     if (keys.has("ArrowLeft") || keys.has("KeyA")) mx -= 1;
     if (keys.has("ArrowRight")|| keys.has("KeyD")) mx += 1;
@@ -1005,7 +1053,6 @@
     const mag = Math.hypot(mx,my) || 1;
     if (mag > 1){ mx/=mag; my/=mag; }
 
-    // focus movement slightly faster than before (less sluggish)
     const spd = player.spd * (focus ? 0.40 : 1.0);
 
     player.x += mx * spd * dt;
@@ -1077,7 +1124,6 @@
         const mult = cfg.enemyFireMult;
         const sp = cfg.bulletSpeed;
 
-        // ✅ bullet rate reduced by: longer cooldown ranges + smaller mult
         if (e.kind === "drone"){
           e.shootCD = rand(1.15, 1.85) / mult;
           const v = aimToPlayer(e.x, e.y, sp);
@@ -1130,10 +1176,8 @@
       boss.shot -= dtWorld;
       const fireMult = cfg.bossFireMult;
 
-      // ✅ boss bullet rate reduced (bigger base cd)
       if (boss.shot <= 0){
         boss.shot = 0.30 / fireMult;
-
         const sp = cfg.bulletSpeed + 35;
 
         if (boss.type === "HELIX_WARDEN"){
@@ -1219,7 +1263,7 @@
         b.explode -= dtWorld;
         b.y += b.vy * dtWorld;
         if (b.explode <= 0){
-          const n = 6;                 // slightly fewer fragments
+          const n = 6;
           const sp = cfg.bulletSpeed + 35;
           for (let k=0;k<n;k++){
             const ang = (k/n) * Math.PI*2;
@@ -1277,6 +1321,25 @@
       if (d.y > H + 60) drops.splice(i,1);
     }
 
+    // FX update
+    for (let i=state.fx.length-1; i>=0; i--){
+      const f = state.fx[i];
+      f.t += dtWorld;
+      if (f.kind === "spark" || f.kind === "debris"){
+        f.x += f.vx * dtWorld;
+        f.y += f.vy * dtWorld;
+        // gravity
+        f.vy += 520 * dtWorld;
+        // drag
+        f.vx *= Math.pow(0.30, dtWorld);
+        f.vy *= Math.pow(0.35, dtWorld);
+        if (f.kind === "debris"){
+          f.rot += f.vr * dtWorld;
+        }
+      }
+      if (f.t >= f.life) state.fx.splice(i,1);
+    }
+
     if (state.abortFrame){
       enemyBullets.length = 0;
       enemies.forEach(e => e.shootCD += 0.8);
@@ -1299,6 +1362,7 @@
   function draw(){
     ctx.clearRect(0,0,W,H);
     drawFlyingBackground();
+    drawFX();          // ✅ explosion visuals
     drawDrops();
     drawEnemies();
     drawBoss();
@@ -1357,12 +1421,59 @@
     ctx.globalAlpha = 1;
   }
 
+  function drawFX(){
+    for (const f of state.fx){
+      const p = clamp(f.t / f.life, 0, 1);
+      if (f.kind === "flash"){
+        const r = lerp(f.r0, f.r1, p);
+        ctx.globalAlpha = (1 - p) * 0.55;
+        const grad = ctx.createRadialGradient(f.x, f.y, 2, f.x, f.y, r);
+        grad.addColorStop(0, "rgba(255,255,255,0.9)");
+        grad.addColorStop(0.35, "rgba(34,211,238,0.35)");
+        grad.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, r, 0, Math.PI*2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      } else if (f.kind === "spark"){
+        ctx.globalAlpha = (1 - p) * 0.9;
+        ctx.fillStyle = `${f.hue}${(1 - p) * 0.95})`;
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, f.r, 0, Math.PI*2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      } else if (f.kind === "debris"){
+        ctx.globalAlpha = (1 - p) * 0.8;
+        ctx.save();
+        ctx.translate(f.x, f.y);
+        ctx.rotate(f.rot);
+        ctx.fillStyle = "rgba(0,0,0,0.35)";
+        ctx.fillRect(-f.w/2, -f.h/2, f.w, f.h);
+        ctx.restore();
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+
   function drawPlayer(){
     const inv = player.invuln > 0;
+
+    // ✅ invincible blink + subtle glow
     if (inv && Math.floor(state.t*18) % 2 === 0) ctx.globalAlpha = 0.55;
 
     ctx.save();
     ctx.translate(player.x, player.y);
+
+    if (inv){
+      ctx.globalAlpha = 0.35;
+      ctx.strokeStyle = "rgba(34,211,238,0.95)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, 26, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
 
     ctx.globalAlpha = 0.45;
     ctx.fillStyle = "rgba(34,211,238,1)";
@@ -1593,6 +1704,15 @@
     const fireLabel = (LANG === "EN") ? "FIRE" : "射速";
     ctx.fillText(`${hpLabel} ${Math.ceil(player.hp)}/${player.hpMax}`, x + 10, y + h/2);
     ctx.fillText(`♥ x${player.lives}   ${fireLabel} ${FIRE_RATE_LABEL[player.fireRateLevel]}`, x + w + 12, y + h/2);
+
+    // ✅ show invincible countdown when long
+    if (player.invuln > 1.0){
+      ctx.textAlign = "right";
+      ctx.fillStyle = "rgba(34,211,238,0.95)";
+      const sec = Math.ceil(player.invuln);
+      ctx.fillText((LANG === "EN") ? `INV ${sec}s` : `無敵 ${sec}s`, W - 12, y + h/2);
+      ctx.textAlign = "left";
+    }
 
     ctx.globalAlpha = 1;
   }
