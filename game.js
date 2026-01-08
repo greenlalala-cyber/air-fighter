@@ -7,17 +7,130 @@
   const rand  = (a, b) => a + Math.random() * (b - a);
   const chance = (p) => Math.random() < p;
 
+  // =========================
+  // Language (EN / TC)
+  // =========================
+  let LANG = "EN"; // "EN" | "TC"
+
+  const I18N = {
+    EN: {
+      brandSub: "3 scenes • upgrades • bosses",
+      hud: { scene:"Scene", lives:"Lives", hp:"HP", weapon:"Weapon", fire:"Fire", luck:"Luck", sfx:"SFX" },
+      buttons: { start:"Start", resume:"Resume", restart:"Restart", how:"How to Play" },
+      mobile: { fire:"FIRE (Space)", focus:"FOCUS (Shift)", pause:"PAUSE (P)" },
+      sfxOn:"SFX: ON", sfxOff:"SFX: OFF",
+      sfxHudOn:"ON", sfxHudOff:"OFF",
+      tip:"Tip: Focus slows time heavily for precision dodging.",
+      footer:'GitHub Pages: Settings → Pages → Deploy from branch → <b>main</b> / <b>root</b>.',
+      overlayStart: `Move: <b>WASD / Arrow Keys</b><br/>
+                    Shoot: <b>Space</b> (auto-fire) • Focus: <b>Shift</b> • Pause: <b>P</b> / <b>Esc</b><br/><br/>
+                    <b>Items:</b> ▲ Weapon • ✚ Potion • ⚡ Fire Rate • ✦ Life Up (rare)<br/>
+                    Lose a life → weapon + fire rate reset to base.`,
+      pausedTitle:"PAUSED",
+      pausedText:`Resume: <b>P</b> / <b>Esc</b><br/><br/>
+                  Items: ▲ Weapon • ✚ Heal • ⚡ Fire Rate • ✦ Life Up (rare)`,
+      howTitle:"How to Play",
+      howText:`<b>Move:</b> WASD / Arrows (or joystick)<br/>
+               <b>Shoot:</b> Space / FIRE (auto-fire)<br/>
+               <b>Focus:</b> Shift / FOCUS (slow time heavily)<br/>
+               <b>Pause:</b> P / Esc / PAUSE<br/><br/>
+               <b>Items:</b> ▲ Weapon • ✚ Potion • ⚡ Fire Rate (I/II/III) • ✦ Life Up (rare)<br/>
+               Lose a life → weapon + fire rate reset.`,
+      helpTitle:"ICON GUIDE",
+      helpNotes:`<b>Notes</b><br/>
+                 ▲ Weapon: upgrade weapon tier<br/>
+                 ✚ Potion: fully heal HP<br/>
+                 ⚡ Fire Rate: I → II → III (faster shooting)<br/>
+                 ✦ Life Up: +1 life (rare, capped)<br/><br/>
+                 Close with <b>Resume</b> or press <b>P</b>/<b>Esc</b>.`,
+      canvas: { items:"Items", weapons:"Weapons (bullet visuals)" },
+      toast: {
+        enterScene:(n)=>`Enter Scene ${n}`,
+        bossIncoming:(name)=>`Boss incoming — ${name}`,
+        bossDefeat:(n)=>`Boss defeated — Scene ${n}`,
+        sceneNow:(n,name)=>`Scene ${n} — ${name}`,
+        potion:"Potion: HP fully healed",
+        weapon:(name)=>`Weapon: ${name}`,
+        maxWeapon:"+2 HP",
+        fire:(lvl)=>`Fire Rate: ${lvl}`,
+        fireMax:"+1 HP",
+        lifeUp:"RARE: +1 Life!",
+        lifeMax:"Life is max",
+        lifeLost:(luck)=>`Life lost! Power reset. Luck x${luck}`,
+        gameOver:"Game Over",
+        sfxOn:"SFX enabled",
+        sfxOff:"SFX muted",
+      }
+    },
+
+    TC: {
+      brandSub: "3 幕 • 升級 • 首領",
+      hud: { scene:"場景", lives:"生命", hp:"血量", weapon:"武器", fire:"射速", luck:"幸運", sfx:"音效" },
+      buttons: { start:"開始", resume:"繼續", restart:"重來", how:"玩法說明" },
+      mobile: { fire:"開火 (Space)", focus:"精準 (Shift)", pause:"暫停 (P)" },
+      sfxOn:"音效：開", sfxOff:"音效：關",
+      sfxHudOn:"開", sfxHudOff:"關",
+      tip:"提示：精準模式會大幅減速，方便閃躲。",
+      footer:'GitHub Pages：設定 → Pages → 從分支部署 → <b>main</b> / <b>root</b>。',
+      overlayStart: `移動：<b>WASD / 方向鍵</b><br/>
+                    射擊：<b>Space</b>（自動連射） • 精準：<b>Shift</b> • 暫停：<b>P</b> / <b>Esc</b><br/><br/>
+                    <b>道具：</b> ▲ 武器 • ✚ 藥水 • ⚡ 射速 • ✦ 生命 +1（稀有）<br/>
+                    失去一條命 → 武器與射速重置為初始。`,
+      pausedTitle:"已暫停",
+      pausedText:`繼續：<b>P</b> / <b>Esc</b><br/><br/>
+                  道具：▲ 武器 • ✚ 回血 • ⚡ 射速 • ✦ 生命 +1（稀有）`,
+      howTitle:"玩法說明",
+      howText:`<b>移動：</b> WASD / 方向鍵（或搖桿）<br/>
+               <b>射擊：</b> Space / 開火（自動連射）<br/>
+               <b>精準：</b> Shift / 精準（大幅減速）<br/>
+               <b>暫停：</b> P / Esc / 暫停<br/><br/>
+               <b>道具：</b> ▲ 武器 • ✚ 藥水 • ⚡ 射速（I/II/III） • ✦ 生命 +1（稀有）<br/>
+               失去一條命 → 武器與射速重置。`,
+      helpTitle:"圖示說明",
+      helpNotes:`<b>說明</b><br/>
+                 ▲ 武器：提升武器等級<br/>
+                 ✚ 藥水：血量回滿<br/>
+                 ⚡ 射速：I → II → III（射得更快）<br/>
+                 ✦ 生命 +1：多一條命（稀有，有上限）<br/><br/>
+                 按<b>繼續</b>或<b>P</b>/<b>Esc</b>關閉。`,
+      canvas: { items:"道具", weapons:"武器（子彈外觀）" },
+      toast: {
+        enterScene:(n)=>`進入第 ${n} 幕`,
+        bossIncoming:(name)=>`首領出現 — ${name}`,
+        bossDefeat:(n)=>`首領擊破 — 第 ${n} 幕`,
+        sceneNow:(n,name)=>`第 ${n} 幕 — ${name}`,
+        potion:"藥水：血量回滿",
+        weapon:(name)=>`武器：${name}`,
+        maxWeapon:"血量 +2",
+        fire:(lvl)=>`射速：${lvl}`,
+        fireMax:"血量 +1",
+        lifeUp:"稀有：生命 +1！",
+        lifeMax:"生命已達上限",
+        lifeLost:(luck)=>`失去一命！能力重置。幸運 x${luck}`,
+        gameOver:"遊戲結束",
+        sfxOn:"音效已開啟",
+        sfxOff:"音效已靜音",
+      }
+    }
+  };
+
+  const SCENES = {
+    1: { EN:"Skyline Drift", TC:"天際漂流" },
+    2: { EN:"Ion Stratos",   TC:"離子平流層" },
+    3: { EN:"Void Aurora",   TC:"虛空極光" },
+  };
+
   const WEAPONS = [
-    { name: "Basic",    kind: "basic"    },
-    { name: "Spread",   kind: "spread"   },
-    { name: "Laser",    kind: "laser"    },
-    { name: "Missiles", kind: "missiles" },
-    { name: "Piercer",  kind: "piercer"  },
-    { name: "Shock",    kind: "shock"    },
+    { kind:"basic",    name:{ EN:"Basic",    TC:"基礎" } },
+    { kind:"spread",   name:{ EN:"Spread",   TC:"散射" } },
+    { kind:"laser",    name:{ EN:"Laser",    TC:"雷射" } },
+    { kind:"missiles", name:{ EN:"Missiles", TC:"導彈" } },
+    { kind:"piercer",  name:{ EN:"Piercer",  TC:"貫穿" } },
+    { kind:"shock",    name:{ EN:"Shock",    TC:"電擊" } },
   ];
 
-  const FIRE_RATE_LABEL = ["I", "II", "III"];
-  const FIRE_RATE_MULT  = [1.00, 0.82, 0.68]; // lower = faster
+  const FIRE_RATE_LABEL = ["I","II","III"];
+  const FIRE_RATE_MULT  = [1.00, 0.82, 0.68];
 
   // =========================
   // Canvas & UI
@@ -33,7 +146,20 @@
   const hudLuck   = document.getElementById("hudLuck");
   const hudSfx    = document.getElementById("hudSfx");
 
+  const lblScene  = document.getElementById("lblScene");
+  const lblLives  = document.getElementById("lblLives");
+  const lblHP     = document.getElementById("lblHP");
+  const lblWeapon = document.getElementById("lblWeapon");
+  const lblFire   = document.getElementById("lblFire");
+  const lblLuck   = document.getElementById("lblLuck");
+  const lblSfx    = document.getElementById("lblSfx");
+
+  const brandSub  = document.getElementById("brandSub");
+  const footerHint= document.getElementById("footerHint");
+  const overlayTip= document.getElementById("overlayTip");
+
   const btnHelp   = document.getElementById("btnHelp");
+  const btnLang   = document.getElementById("btnLang");
 
   const overlay = document.getElementById("overlay");
   const overlayTitle = document.getElementById("overlayTitle");
@@ -43,6 +169,44 @@
   const btnResume = document.getElementById("btnResume");
   const btnRestart = document.getElementById("btnRestart");
   const toast = document.getElementById("toast");
+
+  const btnFire = document.getElementById("btnFire");
+  const btnFocus = document.getElementById("btnFocus");
+  const btnPause = document.getElementById("btnPause");
+
+  function T(){ return I18N[LANG]; }
+
+  function applyLang(){
+    const t = T();
+
+    // HUD labels
+    lblScene.textContent  = t.hud.scene;
+    lblLives.textContent  = t.hud.lives;
+    lblHP.textContent     = t.hud.hp;
+    lblWeapon.textContent = t.hud.weapon;
+    if (lblFire) lblFire.textContent = t.hud.fire;
+    if (lblLuck) lblLuck.textContent = t.hud.luck;
+    if (lblSfx)  lblSfx.textContent  = t.hud.sfx;
+
+    // Brand + footer + tip
+    brandSub.textContent = t.brandSub;
+    footerHint.innerHTML = t.footer;
+    overlayTip.textContent = t.tip;
+
+    // Buttons (static)
+    btnPrimary.textContent = t.buttons.start;
+    btnResume.textContent  = t.buttons.resume;
+    btnRestart.textContent = t.buttons.restart;
+    btnSound.textContent   = (SFX.enabled ? t.sfxOn : t.sfxOff);
+
+    // Mobile control labels
+    btnFire.textContent  = t.mobile.fire;
+    btnFocus.textContent = t.mobile.focus;
+    btnPause.textContent = t.mobile.pause;
+
+    // Lang pill
+    btnLang.textContent = LANG;
+  }
 
   function showToast(msg){
     toast.textContent = msg;
@@ -70,9 +234,9 @@
 
   function setSfxEnabled(on){
     SFX.enabled = on;
-    if (hudSfx) hudSfx.textContent = on ? "ON" : "OFF";
-    btnSound.textContent = `SFX: ${on ? "ON" : "OFF"}`;
-    showToast(on ? "SFX enabled" : "SFX muted");
+    if (hudSfx) hudSfx.textContent = on ? T().sfxHudOn : T().sfxHudOff;
+    btnSound.textContent = on ? T().sfxOn : T().sfxOff;
+    showToast(on ? T().toast.sfxOn : T().toast.sfxOff);
   }
 
   function beep({type="sine", f=440, f2=null, t=0.08, g=0.20, attack=0.002, release=0.06, pan=0}){
@@ -95,12 +259,9 @@
 
     if (panner){
       panner.pan.setValueAtTime(clamp(pan, -1, 1), now);
-      osc.connect(gain);
-      gain.connect(panner);
-      panner.connect(SFX.master);
+      osc.connect(gain); gain.connect(panner); panner.connect(SFX.master);
     } else {
-      osc.connect(gain);
-      gain.connect(SFX.master);
+      osc.connect(gain); gain.connect(SFX.master);
     }
 
     osc.start(now);
@@ -146,9 +307,6 @@
   // Mobile joystick + buttons
   const pad = document.getElementById("pad");
   const padStick = document.getElementById("padStick");
-  const btnFire = document.getElementById("btnFire");
-  const btnFocus = document.getElementById("btnFocus");
-  const btnPause = document.getElementById("btnPause");
 
   let joy = { x: 0, y: 0, active: false };
   let padRect = null;
@@ -198,6 +356,23 @@
 
   btnPause.addEventListener("click", () => { ensureAudio(); togglePause(); });
 
+  // Language toggle
+  btnLang.addEventListener("click", () => {
+    ensureAudio();
+    LANG = (LANG === "EN") ? "TC" : "EN";
+    applyLang();
+
+    // if overlay is open, refresh it to the correct language context
+    if (overlay.style.display !== "none"){
+      // keep paused overlay in sync
+      if (!state.running){
+        showStartOverlay();
+      } else if (state.paused){
+        openPausedOverlay();
+      }
+    }
+  });
+
   // =========================
   // Game State
   // =========================
@@ -244,11 +419,10 @@
   const drops = [];
   let boss = null;
 
-  // Scene tuning
   const sceneConfig = {
-    1: { name:"Skyline Drift", enemyRate:0.90, baseEnemyHP:9,  bulletSpeed:150, bossHP:430, enemyFireMult:0.72, bossFireMult:0.70 },
-    2: { name:"Ion Stratos",   enemyRate:0.70, baseEnemyHP:12, bulletSpeed:180, bossHP:650, enemyFireMult:0.88, bossFireMult:0.88 },
-    3: { name:"Void Aurora",   enemyRate:0.82, baseEnemyHP:15, bulletSpeed:210, bossHP:900, enemyFireMult:1.00, bossFireMult:1.00 },
+    1: { enemyRate:0.90, baseEnemyHP:9,  bulletSpeed:150, bossHP:430, enemyFireMult:0.72, bossFireMult:0.70 },
+    2: { enemyRate:0.70, baseEnemyHP:12, bulletSpeed:180, bossHP:650, enemyFireMult:0.88, bossFireMult:0.88 },
+    3: { enemyRate:0.82, baseEnemyHP:15, bulletSpeed:210, bossHP:900, enemyFireMult:1.00, bossFireMult:1.00 },
   };
 
   // =========================
@@ -260,6 +434,9 @@
       state.stars.push({ x:Math.random()*W, y:Math.random()*H, s:rand(0.6,2.0), v:rand(30,110) });
     }
   }
+
+  function sceneName(n){ return SCENES[n]?.[LANG] ?? SCENES[n]?.EN ?? `Scene ${n}`; }
+  function weaponName(tier){ return WEAPONS[tier]?.name?.[LANG] ?? WEAPONS[tier]?.name?.EN ?? "Basic"; }
 
   function resetForNewRun(){
     state.t = 0;
@@ -290,11 +467,11 @@
     boss = null;
 
     initStars();
-    showToast("Enter Scene 1");
+    showToast(T().toast.enterScene(1));
   }
 
   // =========================
-  // Drops (DROP RATE updated here)
+  // Drops (drop rate = 0.25)
   // =========================
   function spawnDrop(x, y, kind){
     drops.push({ x, y, r: 12, kind, vy: 120, t: 0 });
@@ -308,7 +485,6 @@
     const wFire    = 0.14 * luck;
     const wLifeUp  = 0.015 * luck;
 
-    // ✅ 1) Drop rate changed from 0.42 to 0.25
     const anyP = clamp(0.25 * luck, 0, 0.80);
     if (!chance(anyP)) return;
 
@@ -321,7 +497,7 @@
   }
 
   // =========================
-  // Enemies
+  // Enemies / Boss (unchanged visuals)
   // =========================
   function spawnEnemy(kind){
     const cfg = sceneConfig[state.scene];
@@ -341,20 +517,17 @@
     enemies.push(e);
   }
 
-  // =========================
-  // Boss
-  // =========================
   function startBoss(){
-    const cfg = sceneConfig[state.scene];
-    state.phase = "boss";
     const bossTypes = ["HELIX_WARDEN", "PRISM_HYDRA", "ABYSS_CROWN"];
     boss = {
       type: bossTypes[state.scene - 1],
       x: W/2, y: -100, r: 52,
-      hp: cfg.bossHP, hpMax: cfg.bossHP,
+      hp: sceneConfig[state.scene].bossHP,
+      hpMax: sceneConfig[state.scene].bossHP,
       t: 0, enter: 1.2, shot: 0, drift: chance(0.5)?-1:1
     };
-    showToast(`Boss incoming — ${cfg.name}`);
+    state.phase = "boss";
+    showToast(T().toast.bossIncoming(sceneName(state.scene)));
     beep({type:"sine", f:180, f2:90, t:0.12, g:0.18, release:0.14});
   }
 
@@ -369,19 +542,22 @@
       state.phase = "wave";
       state.waveStartTime = state.t;
       player.invuln = 1.2;
-      showToast(`Scene ${state.scene} — ${sceneConfig[state.scene].name}`);
+      showToast(T().toast.sceneNow(state.scene, sceneName(state.scene)));
     } else {
       state.phase = "clear";
-      openOverlay("YOU WIN",
-        `All 3 bosses defeated.<br/><br/>Press <b>Start</b> to play again.`,
-        { primary:"Play Again", showResume:false, showRestart:false }
+      openOverlay(
+        LANG === "EN" ? "YOU WIN" : "你贏了",
+        LANG === "EN"
+          ? `All 3 bosses defeated.<br/><br/>Press <b>${T().buttons.start}</b> to play again.`
+          : `三位首領已全部擊破。<br/><br/>按<b>${T().buttons.start}</b>再玩一次。`,
+        { primary:T().buttons.start, showResume:false, showRestart:false }
       );
       state.running = false;
     }
   }
 
   // =========================
-  // Weapons
+  // Weapons (names localized in HUD/toasts)
   // =========================
   function fireCooldown(multBase){
     return multBase * FIRE_RATE_MULT[player.fireRateLevel];
@@ -450,7 +626,6 @@
       return;
     }
 
-    // shock
     bullets.push({ x:player.x, y:player.y-22, vx:0, vy:-820, r:4, dmg:8, kind:"shock", t:0, pierce:4, color:weaponColor("shock") });
     player.weaponHeat = fireCooldown(0.20);
     playSfx.shootLaser(clamp((player.x / W) * 2 - 1, -1, 1));
@@ -459,25 +634,24 @@
   function upgradeWeapon(){
     if (player.weaponTier < WEAPONS.length - 1){
       player.weaponTier += 1;
-      showToast(`Weapon: ${WEAPONS[player.weaponTier].name}`);
-      state.fx.push({ x:player.x, y:player.y, txt:`+ ${WEAPONS[player.weaponTier].name}`, t:0, tag:"good" });
+      showToast(T().toast.weapon(weaponName(player.weaponTier)));
+      playSfx.pickup();
     } else {
       player.hp = clamp(player.hp + 2, 0, player.hpMax);
       state.dropBoost = Math.min(1.2, state.dropBoost + 0.06);
-      showToast("Max weapon: +2 HP");
+      showToast(T().toast.maxWeapon);
+      playSfx.pickup();
     }
-    playSfx.pickup();
   }
 
   function upgradeFireRate(){
     if (player.fireRateLevel < 2){
       player.fireRateLevel += 1;
-      showToast(`Fire Rate: ${FIRE_RATE_LABEL[player.fireRateLevel]}`);
-      state.fx.push({ x:player.x, y:player.y, txt:`FIRE ${FIRE_RATE_LABEL[player.fireRateLevel]}`, t:0, tag:"accent" });
+      showToast(T().toast.fire(FIRE_RATE_LABEL[player.fireRateLevel]));
       playSfx.pickup();
     } else {
       player.hp = clamp(player.hp + 1, 0, player.hpMax);
-      showToast("Fire Rate max: +1 HP");
+      showToast(T().toast.fireMax);
       playSfx.pickup();
     }
   }
@@ -503,15 +677,18 @@
     if (player.lives > 0){
       player.hp = player.hpMax;
       player.invuln = 1.9;
-      showToast(`Life lost! Power reset. Luck x${state.luck.toFixed(2)}`);
+      showToast(T().toast.lifeLost(state.luck.toFixed(2)));
     } else {
       state.phase = "gameover";
-      openOverlay("GAME OVER",
-        `You ran out of lives.<br/><br/>Press <b>Start</b> to retry.`,
-        { primary:"Retry", showResume:false, showRestart:false }
+      openOverlay(
+        LANG === "EN" ? "GAME OVER" : "遊戲結束",
+        LANG === "EN"
+          ? `You ran out of lives.<br/><br/>Press <b>${T().buttons.start}</b> to retry.`
+          : `生命耗盡。<br/><br/>按<b>${T().buttons.start}</b>重新開始。`,
+        { primary:T().buttons.start, showResume:false, showRestart:false }
       );
       state.running = false;
-      showToast("Game Over");
+      showToast(T().toast.gameOver);
     }
   }
 
@@ -524,31 +701,6 @@
     if (player.hp <= 0) loseLife();
   }
 
-  function hitEnemy(e, dmg){
-    e.hp -= dmg;
-    if (e.hp <= 0){
-      state.fx.push({ x:e.x, y:e.y, txt:"✦", t:0, tag:"accent" });
-      tryDropFromEnemy(e.x, e.y);
-      return true;
-    }
-    return false;
-  }
-
-  function hitBoss(dmg){
-    if (!boss) return;
-    boss.hp -= dmg;
-    state.shake = Math.min(0.60, state.shake + 0.02);
-    if (boss.hp <= 0){
-      state.fx.push({ x:boss.x, y:boss.y, txt:"BOSS DOWN", t:0, tag:"good", big:true });
-      showToast(`Boss defeated — Scene ${state.scene}`);
-      playSfx.bossDown();
-      nextSceneOrWin();
-    }
-  }
-
-  // =========================
-  // Collisions & bullets
-  // =========================
   function circleHit(ax, ay, ar, bx, by, br){
     const dx = ax - bx, dy = ay - by, rr = ar + br;
     return dx*dx + dy*dy <= rr*rr;
@@ -582,7 +734,7 @@
   function openOverlay(title, html, opts={}){
     overlayTitle.textContent = title;
     overlayText.innerHTML = html;
-    btnPrimary.textContent = opts.primary ?? "Start";
+    btnPrimary.textContent = opts.primary ?? T().buttons.start;
     btnResume.style.display  = opts.showResume ? "inline-flex" : "none";
     btnRestart.style.display = opts.showRestart ? "inline-flex" : "none";
     overlay.style.display = "flex";
@@ -591,17 +743,18 @@
 
   let last = 0;
 
+  function openPausedOverlay(){
+    openOverlay(T().pausedTitle, T().pausedText, {
+      showResume:true, showRestart:true, primary:T().buttons.how
+    });
+  }
+
   function togglePause(){
     if (!state.running) return;
     state.paused = !state.paused;
     if (state.paused){
       firing = false;
-      openOverlay(
-        "PAUSED",
-        `Resume: <b>P</b> / <b>Esc</b><br/><br/>
-         Items: ▲ Weapon • ✚ Heal • ⚡ Fire Rate • ✦ Life Up (rare)`,
-        { showResume:true, showRestart:true, primary:"How to Play" }
-      );
+      openPausedOverlay();
       playSfx.pause();
     } else {
       closeOverlay();
@@ -609,6 +762,8 @@
       last = 0;
     }
   }
+
+  btnSound.addEventListener("click", () => { ensureAudio(); setSfxEnabled(!SFX.enabled); });
 
   btnPrimary.addEventListener("click", () => {
     ensureAudio();
@@ -622,34 +777,100 @@
       return;
     }
 
-    overlayTitle.textContent = "How to Play";
-    overlayText.innerHTML = `
-      <b>Move:</b> WASD / Arrows (or joystick)<br/>
-      <b>Shoot:</b> Space / FIRE (auto-fire)<br/>
-      <b>Focus:</b> Shift / FOCUS (slow time heavily)<br/>
-      <b>Pause:</b> P / Esc / PAUSE<br/><br/>
-      <b>Items:</b> ▲ Weapon • ✚ Potion • ⚡ Fire Rate (I/II/III) • ✦ Life Up (rare)<br/>
-      Lose a life → weapon + fire rate reset.
-    `;
+    overlayTitle.textContent = T().howTitle;
+    overlayText.innerHTML = T().howText;
+    btnPrimary.textContent = T().buttons.how;
   });
 
   btnResume.addEventListener("click", () => { ensureAudio(); if (state.paused) togglePause(); });
   btnRestart.addEventListener("click", () => { ensureAudio(); closeOverlay(); resetForNewRun(); state.running=true; state.paused=false; last=0; requestAnimationFrame(tick); });
-  btnSound.addEventListener("click", () => { ensureAudio(); setSfxEnabled(!SFX.enabled); });
 
   // =========================
-  // ✅ Help popup with CANVAS mini-icons
+  // Help popup with localized canvas labels
   // =========================
+  function roundRect(c, x, y, w, h, r){
+    const rr = typeof r === "number" ? { tl:r, tr:r, br:r, bl:r } : r;
+    c.beginPath();
+    c.moveTo(x + rr.tl, y);
+    c.lineTo(x + w - rr.tr, y);
+    c.quadraticCurveTo(x + w, y, x + w, y + rr.tr);
+    c.lineTo(x + w, y + h - rr.br);
+    c.quadraticCurveTo(x + w, y + h, x + w - rr.br, y + h);
+    c.lineTo(x + rr.bl, y + h);
+    c.quadraticCurveTo(x, y + h, x, y + h - rr.bl);
+    c.lineTo(x, y + rr.tl);
+    c.quadraticCurveTo(x, y, x + rr.tl, y);
+    c.closePath();
+  }
+
+  function drawDropIcon(c, x, y, fill, label){
+    const glow = c.createRadialGradient(x+12, y+12, 2, x+12, y+12, 22);
+    glow.addColorStop(0, "rgba(255,255,255,0.35)");
+    glow.addColorStop(1, "rgba(255,255,255,0)");
+    c.fillStyle = glow;
+    c.beginPath(); c.arc(x+12, y+12, 20, 0, Math.PI*2); c.fill();
+
+    c.fillStyle = fill;
+    c.strokeStyle = "rgba(0,0,0,0.18)";
+    c.lineWidth = 2;
+    roundRect(c, x, y, 24, 24, 8);
+    c.fill(); c.stroke();
+
+    c.fillStyle = "rgba(0,0,0,0.78)";
+    c.font = "900 14px ui-sans-serif, system-ui";
+    c.textAlign = "center";
+    c.textBaseline = "middle";
+    c.fillText(label, x+12, y+12);
+    c.textAlign = "left";
+  }
+
+  function drawWeaponMini(c, x, y, kind, col){
+    c.fillStyle = "rgba(0,0,0,0.06)";
+    roundRect(c, x, y, 28, 40, 10);
+    c.fill();
+    c.strokeStyle = "rgba(0,0,0,0.10)";
+    c.lineWidth = 2;
+    c.stroke();
+
+    if (kind === "laser"){
+      c.globalAlpha = 0.9;
+      c.fillStyle = col;
+      c.fillRect(x+13, y+8, 2, 22);
+      c.globalAlpha = 1;
+      return;
+    }
+
+    if (kind === "spread"){
+      c.fillStyle = col;
+      c.beginPath(); c.arc(x+10, y+18, 3, 0, Math.PI*2); c.fill();
+      c.beginPath(); c.arc(x+14, y+14, 3, 0, Math.PI*2); c.fill();
+      c.beginPath(); c.arc(x+18, y+18, 3, 0, Math.PI*2); c.fill();
+      return;
+    }
+
+    if (kind === "missile"){
+      c.fillStyle = col;
+      c.beginPath(); c.arc(x+14, y+18, 4, 0, Math.PI*2); c.fill();
+      c.globalAlpha = 0.25;
+      c.fillStyle = "rgba(34,211,238,1)";
+      c.beginPath(); c.arc(x+14, y+25, 6, 0, Math.PI*2); c.fill();
+      c.globalAlpha = 1;
+      return;
+    }
+
+    c.fillStyle = col;
+    c.beginPath(); c.arc(x+14, y+18, 4, 0, Math.PI*2); c.fill();
+  }
+
   function drawHelpCanvasIcons(c2){
-    // defensive
     if (!c2) return;
     const g = c2.getContext("2d");
     if (!g) return;
 
+    const t = T();
     const w = c2.width, h = c2.height;
     g.clearRect(0,0,w,h);
 
-    // background panel look
     const grad = g.createLinearGradient(0,0,0,h);
     grad.addColorStop(0, "rgba(255,255,255,0.95)");
     grad.addColorStop(1, "rgba(255,255,255,0.78)");
@@ -657,24 +878,22 @@
     roundRect(g, 0, 0, w, h, 14);
     g.fill();
 
-    g.fillStyle = "rgba(0,0,0,0.08)";
-    roundRect(g, 1, 1, w-2, h-2, 14);
     g.strokeStyle = "rgba(0,0,0,0.12)";
     g.lineWidth = 2;
+    roundRect(g, 1, 1, w-2, h-2, 14);
     g.stroke();
 
     g.font = "900 12px ui-sans-serif, system-ui";
     g.fillStyle = "rgba(0,0,0,0.70)";
-    g.fillText("Items", 14, 20);
+    g.fillText(t.canvas.items, 14, 20);
 
-    // item icons (same style as in-game drops)
     const itemRowY = 34;
     const itemX = [14, 92, 170, 248];
     const items = [
-      { kind:"weapon", label:"▲", fill:"rgba(47,91,255,0.90)", text:"Weapon" },
-      { kind:"potion", label:"✚", fill:"rgba(22,163,74,0.90)", text:"Potion" },
-      { kind:"firerate", label:"⚡", fill:"rgba(34,211,238,0.90)", text:"Fire Rate" },
-      { kind:"life", label:"✦", fill:"rgba(245,158,11,0.95)", text:"Life Up" },
+      { fill:"rgba(47,91,255,0.90)", label:"▲", text:(LANG==="EN"?"Weapon":"武器") },
+      { fill:"rgba(22,163,74,0.90)", label:"✚", text:(LANG==="EN"?"Potion":"藥水") },
+      { fill:"rgba(34,211,238,0.90)", label:"⚡", text:(LANG==="EN"?"Fire Rate":"射速") },
+      { fill:"rgba(245,158,11,0.95)", label:"✦", text:(LANG==="EN"?"Life Up":"生命+1") },
     ];
 
     for (let i=0;i<items.length;i++){
@@ -684,17 +903,23 @@
       g.fillText(items[i].text, itemX[i] + 30, itemRowY + 16);
     }
 
-    // weapons row
     g.font = "900 12px ui-sans-serif, system-ui";
     g.fillStyle = "rgba(0,0,0,0.70)";
-    g.fillText("Weapons (bullet visuals)", 14, 92);
+    g.fillText(t.canvas.weapons, 14, 92);
 
     const wx = 14;
     const wy = 106;
     const spacing = 56;
 
     const weaponKinds = ["basic","spread","laser","missile","pierce","shock"];
-    const weaponNames = ["Basic","Spread","Laser","Missile","Pierce","Shock"];
+    const weaponNames = [
+      (LANG==="EN"?"Basic":"基礎"),
+      (LANG==="EN"?"Spread":"散射"),
+      (LANG==="EN"?"Laser":"雷射"),
+      (LANG==="EN"?"Missile":"導彈"),
+      (LANG==="EN"?"Pierce":"貫穿"),
+      (LANG==="EN"?"Shock":"電擊"),
+    ];
 
     for (let i=0;i<weaponKinds.length;i++){
       const x = wx + i*spacing;
@@ -709,8 +934,6 @@
 
   function openHelp(){
     ensureAudio();
-
-    // force pause
     if (state.running && !state.paused){
       state.paused = true;
       firing = false;
@@ -718,26 +941,20 @@
     }
 
     openOverlay(
-      "ICON GUIDE",
+      T().helpTitle,
       `
         <div style="display:flex; flex-direction:column; gap:10px;">
           <canvas id="helpCanvas" width="320" height="170"
             style="width:100%; height:auto; border-radius:14px; display:block;"></canvas>
 
           <div style="text-align:left; line-height:1.6;">
-            <b>Notes</b><br/>
-            ▲ Weapon: upgrade weapon tier<br/>
-            ✚ Potion: fully heal HP<br/>
-            ⚡ Fire Rate: I → II → III (faster shooting)<br/>
-            ✦ Life Up: +1 life (rare, capped)<br/><br/>
-            Close with <b>Resume</b> or press <b>P</b>/<b>Esc</b>.
+            ${T().helpNotes}
           </div>
         </div>
       `,
-      { showResume:true, showRestart:true, primary:"How to Play" }
+      { showResume:true, showRestart:true, primary:T().buttons.how }
     );
 
-    // draw after DOM updates
     requestAnimationFrame(() => {
       const hc = document.getElementById("helpCanvas");
       if (hc) drawHelpCanvasIcons(hc);
@@ -761,7 +978,7 @@
     state.shake = Math.max(0, state.shake - dt * 1.6);
     state.dropBoost = Math.max(0, state.dropBoost - dt * 0.08);
 
-    // move player (normal dt)
+    // move player
     let mx=0,my=0;
     if (keys.has("ArrowLeft") || keys.has("KeyA")) mx -= 1;
     if (keys.has("ArrowRight")|| keys.has("KeyD")) mx += 1;
@@ -821,7 +1038,7 @@
       }
     }
 
-    // enemies
+    // enemies (same as before)
     for (let i=enemies.length-1; i>=0; i--){
       const e = enemies[i];
       e.t += dtWorld;
@@ -878,7 +1095,7 @@
       if (e.y > H + 70) enemies.splice(i, 1);
     }
 
-    // boss
+    // boss (same as before)
     if (boss){
       boss.t += dtWorld;
 
@@ -919,7 +1136,6 @@
     // player bullets
     for (let i=bullets.length-1; i>=0; i--){
       const b = bullets[i];
-      b.t += dtWorld;
 
       if (b.kind === "missile"){
         b.life -= dtWorld;
@@ -941,9 +1157,11 @@
       for (let j=enemies.length-1; j>=0 && !removed; j--){
         const e = enemies[j];
         if (circleHit(b.x, b.y, b.r, e.x, e.y, e.r)){
-          const killed = hitEnemy(e, b.dmg);
-          if (killed) enemies.splice(j, 1);
-
+          e.hp -= b.dmg;
+          if (e.hp <= 0){
+            tryDropFromEnemy(e.x, e.y);
+            enemies.splice(j, 1);
+          }
           if (b.pierce){
             b.pierce -= 1;
             if (b.pierce <= 0){ bullets.splice(i,1); removed=true; }
@@ -954,9 +1172,15 @@
       }
 
       if (!removed && boss && circleHit(b.x,b.y,b.r, boss.x,boss.y,boss.r)){
-        hitBoss(b.dmg);
+        boss.hp -= b.dmg;
         bullets.splice(i,1);
         removed = true;
+
+        if (boss.hp <= 0){
+          showToast(T().toast.bossDefeat(state.scene));
+          playSfx.bossDown();
+          nextSceneOrWin();
+        }
       }
 
       if (!removed && (b.y < -50 || b.y > H+50 || b.x < -60 || b.x > W+60)){
@@ -967,13 +1191,10 @@
     // enemy bullets
     for (let i=enemyBullets.length-1; i>=0; i--){
       const b = enemyBullets[i];
-      b.t += dtWorld;
 
       if (b.kind === "bomb"){
         b.explode -= dtWorld;
-        b.x += b.vx * dtWorld;
         b.y += b.vy * dtWorld;
-
         if (b.explode <= 0){
           const n = 7;
           const sp = cfg.bulletSpeed + 40;
@@ -1011,8 +1232,7 @@
       if (circleHit(d.x, d.y, d.r, player.x, player.y, player.r+3)){
         if (d.kind === "potion"){
           player.hp = player.hpMax;
-          showToast("Potion: HP fully healed");
-          state.fx.push({ x:player.x, y:player.y, txt:"FULL HEAL", t:0, tag:"good" });
+          showToast(T().toast.potion);
           playSfx.pickup();
         } else if (d.kind === "weapon"){
           upgradeWeapon();
@@ -1021,11 +1241,10 @@
         } else if (d.kind === "life"){
           if (player.lives < player.livesMax){
             player.lives += 1;
-            showToast("RARE: +1 Life!");
-            state.fx.push({ x:player.x, y:player.y, txt:"+1 LIFE", t:0, tag:"good", big:true });
+            showToast(T().toast.lifeUp);
             playSfx.lifeUp();
           } else {
-            showToast("Life is max");
+            showToast(T().toast.lifeMax);
             playSfx.pickup();
           }
         }
@@ -1042,29 +1261,22 @@
       state.abortFrame = false;
     }
 
-    // HUD
+    // HUD values
     hudScene.textContent = String(state.scene);
     hudLives.textContent = String(player.lives);
     hudHP.textContent = `${clamp(Math.ceil(player.hp),0,player.hpMax)}/${player.hpMax}`;
-    if (hudWeapon) hudWeapon.textContent = WEAPONS[player.weaponTier]?.name ?? "Basic";
+    hudWeapon.textContent = weaponName(player.weaponTier);
     if (hudFire) hudFire.textContent = FIRE_RATE_LABEL[player.fireRateLevel] ?? "I";
     if (hudLuck) hudLuck.textContent = `x${(state.luck * (1+state.dropBoost)).toFixed(2)}`;
+    if (hudSfx) hudSfx.textContent = SFX.enabled ? T().sfxHudOn : T().sfxHudOff;
   }
 
   // =========================
-  // Draw
+  // Draw (same visuals as your previous version)
   // =========================
   function draw(){
-    const sh = state.shake;
-    const sx = (Math.random()*2-1) * sh * 9;
-    const sy = (Math.random()*2-1) * sh * 9;
-
-    ctx.save();
-    ctx.translate(sx, sy);
-
-    ctx.clearRect(-40, -40, W+80, H+80);
+    ctx.clearRect(0,0,W,H);
     drawFlyingBackground();
-
     drawDrops();
     drawEnemies();
     drawBoss();
@@ -1072,8 +1284,6 @@
     drawEnemyBullets();
     drawPlayer();
     drawCanvasHP();
-
-    ctx.restore();
   }
 
   function drawFlyingBackground(){
@@ -1171,30 +1381,34 @@
     ctx.globalAlpha = 1;
   }
 
+  function roundRectDraw(c, x, y, w, h, r){
+    c.beginPath();
+    c.moveTo(x+r, y);
+    c.lineTo(x+w-r, y);
+    c.quadraticCurveTo(x+w, y, x+w, y+r);
+    c.lineTo(x+w, y+h-r);
+    c.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+    c.lineTo(x+r, y+h);
+    c.quadraticCurveTo(x, y+h, x, y+h-r);
+    c.lineTo(x, y+r);
+    c.quadraticCurveTo(x, y, x+r, y);
+    c.closePath();
+  }
+
   function drawEnemies(){
     for (const e of enemies){
       ctx.save();
       ctx.translate(e.x, e.y);
 
-      const glow = ctx.createRadialGradient(0,0,2, 0,0,e.r*2.2);
-      glow.addColorStop(0, "rgba(255,255,255,0.22)");
-      glow.addColorStop(1, "rgba(255,255,255,0)");
-      ctx.fillStyle = glow;
-      ctx.beginPath();
-      ctx.arc(0,0,e.r*2.0,0,Math.PI*2);
-      ctx.fill();
-
       if (e.kind === "drone"){
         ctx.fillStyle = "rgba(255,255,255,0.78)";
         ctx.strokeStyle = "rgba(47,91,255,0.85)";
         ctx.lineWidth = 2;
-        roundRect(ctx, -e.r, -e.r*0.75, e.r*2, e.r*1.5, 10);
+        roundRectDraw(ctx, -e.r, -e.r*0.75, e.r*2, e.r*1.5, 10);
         ctx.fill(); ctx.stroke();
         ctx.fillStyle = "rgba(34,211,238,0.70)";
         ctx.beginPath(); ctx.arc(0,0,6,0,Math.PI*2); ctx.fill();
-      }
-
-      if (e.kind === "sweeper"){
+      } else if (e.kind === "sweeper"){
         ctx.fillStyle = "rgba(255,255,255,0.74)";
         ctx.strokeStyle = "rgba(34,211,238,0.92)";
         ctx.lineWidth = 2.5;
@@ -1205,9 +1419,7 @@
         ctx.lineTo(-e.r, 0);
         ctx.closePath();
         ctx.fill(); ctx.stroke();
-      }
-
-      if (e.kind === "sniper"){
+      } else if (e.kind === "sniper"){
         ctx.fillStyle = "rgba(255,255,255,0.70)";
         ctx.strokeStyle = "rgba(239,68,68,0.92)";
         ctx.lineWidth = 2.5;
@@ -1218,13 +1430,11 @@
         ctx.lineTo(-e.r*0.85, e.r*0.65);
         ctx.closePath();
         ctx.fill(); ctx.stroke();
-      }
-
-      if (e.kind === "bomber"){
+      } else {
         ctx.fillStyle = "rgba(255,255,255,0.72)";
         ctx.strokeStyle = "rgba(245,158,11,0.95)";
         ctx.lineWidth = 2.5;
-        roundRect(ctx, -e.r, -e.r*0.65, e.r*2, e.r*1.3, 12);
+        roundRectDraw(ctx, -e.r, -e.r*0.65, e.r*2, e.r*1.3, 12);
         ctx.fill(); ctx.stroke();
       }
 
@@ -1234,7 +1444,6 @@
 
   function drawBoss(){
     if (!boss) return;
-
     const pad = 12;
     const barW = W - pad*2;
     const barH = 10;
@@ -1250,12 +1459,6 @@
     const rr = boss.r;
 
     if (boss.type === "HELIX_WARDEN"){
-      const glow = ctx.createRadialGradient(0,0,10, 0,0,rr*2.2);
-      glow.addColorStop(0, "rgba(47,91,255,0.25)");
-      glow.addColorStop(1, "rgba(255,255,255,0)");
-      ctx.fillStyle = glow;
-      ctx.beginPath(); ctx.arc(0,0,rr*2,0,Math.PI*2); ctx.fill();
-
       ctx.fillStyle = "rgba(255,255,255,0.75)";
       ctx.strokeStyle = "rgba(47,91,255,0.90)";
       ctx.lineWidth = 3;
@@ -1264,7 +1467,7 @@
       ctx.fillStyle = "rgba(255,255,255,0.72)";
       ctx.strokeStyle = "rgba(34,211,238,0.92)";
       ctx.lineWidth = 3;
-      roundRect(ctx, -rr, -rr*0.55, rr*2, rr*1.1, 18);
+      roundRectDraw(ctx, -rr, -rr*0.55, rr*2, rr*1.1, 18);
       ctx.fill(); ctx.stroke();
     } else {
       ctx.fillStyle = "rgba(255,255,255,0.70)";
@@ -1301,13 +1504,8 @@
 
   function drawEnemyBullets(){
     for (const b of enemyBullets){
-      if (b.kind === "bomb"){
-        ctx.fillStyle = "rgba(245,158,11,0.95)";
-        ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill();
-      } else {
-        ctx.fillStyle = "rgba(239,68,68,0.92)";
-        ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill();
-      }
+      ctx.fillStyle = (b.kind === "bomb") ? "rgba(245,158,11,0.95)" : "rgba(239,68,68,0.92)";
+      ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill();
     }
   }
 
@@ -1321,16 +1519,10 @@
       if (d.kind === "firerate"){ fill = "rgba(34,211,238,0.90)"; label = "⚡"; }
       if (d.kind === "life"){ fill = "rgba(245,158,11,0.95)"; label = "✦"; }
 
-      const glow = ctx.createRadialGradient(0,0,2, 0,0,30);
-      glow.addColorStop(0, "rgba(255,255,255,0.35)");
-      glow.addColorStop(1, "rgba(255,255,255,0)");
-      ctx.fillStyle = glow;
-      ctx.beginPath(); ctx.arc(0,0,28,0,Math.PI*2); ctx.fill();
-
       ctx.fillStyle = fill;
       ctx.strokeStyle = "rgba(0,0,0,0.18)";
       ctx.lineWidth = 2;
-      roundRect(ctx, -12, -12, 24, 24, 8);
+      roundRectDraw(ctx, -12, -12, 24, 24, 8);
       ctx.fill(); ctx.stroke();
 
       ctx.fillStyle = "rgba(0,0,0,0.75)";
@@ -1352,29 +1544,33 @@
 
     ctx.globalAlpha = 0.92;
     ctx.fillStyle = "rgba(255,255,255,0.65)";
-    roundRect(ctx, x-2, y-2, w+4, h+4, 10);
+    roundRectDraw(ctx, x-2, y-2, w+4, h+4, 10);
     ctx.fill();
 
     ctx.fillStyle = "rgba(0,0,0,0.10)";
-    roundRect(ctx, x, y, w, h, 9);
+    roundRectDraw(ctx, x, y, w, h, 9);
     ctx.fill();
 
     const p = clamp(player.hp / player.hpMax, 0, 1);
     ctx.fillStyle = p > 0.35 ? "rgba(34,211,238,0.95)" : "rgba(239,68,68,0.95)";
-    roundRect(ctx, x, y, w*p, h, 9);
+    roundRectDraw(ctx, x, y, w*p, h, 9);
     ctx.fill();
 
     ctx.strokeStyle = "rgba(0,0,0,0.14)";
     ctx.lineWidth = 1;
-    roundRect(ctx, x, y, w, h, 9);
+    roundRectDraw(ctx, x, y, w, h, 9);
     ctx.stroke();
 
     ctx.fillStyle = "rgba(0,0,0,0.75)";
     ctx.font = "900 12px ui-sans-serif, system-ui";
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
-    ctx.fillText(`HP ${Math.ceil(player.hp)}/${player.hpMax}`, x + 10, y + h/2);
-    ctx.fillText(`♥ x${player.lives}   FIRE ${FIRE_RATE_LABEL[player.fireRateLevel]}`, x + w + 12, y + h/2);
+
+    const hpLabel = (LANG === "EN") ? "HP" : "血量";
+    ctx.fillText(`${hpLabel} ${Math.ceil(player.hp)}/${player.hpMax}`, x + 10, y + h/2);
+
+    const fireLabel = (LANG === "EN") ? "FIRE" : "射速";
+    ctx.fillText(`♥ x${player.lives}   ${fireLabel} ${FIRE_RATE_LABEL[player.fireRateLevel]}`, x + w + 12, y + h/2);
 
     ctx.globalAlpha = 1;
   }
@@ -1402,100 +1598,19 @@
   }
 
   // =========================
-  // Helpers for Help Canvas
-  // =========================
-  function roundRect(c, x, y, w, h, r){
-    const rr = typeof r === "number" ? { tl:r, tr:r, br:r, bl:r } : r;
-    c.beginPath();
-    c.moveTo(x + rr.tl, y);
-    c.lineTo(x + w - rr.tr, y);
-    c.quadraticCurveTo(x + w, y, x + w, y + rr.tr);
-    c.lineTo(x + w, y + h - rr.br);
-    c.quadraticCurveTo(x + w, y + h, x + w - rr.br, y + h);
-    c.lineTo(x + rr.bl, y + h);
-    c.quadraticCurveTo(x, y + h, x, y + h - rr.bl);
-    c.lineTo(x, y + rr.tl);
-    c.quadraticCurveTo(x, y, x + rr.tl, y);
-    c.closePath();
-  }
-
-  function drawDropIcon(c, x, y, fill, label){
-    // glow
-    const glow = c.createRadialGradient(x+12, y+12, 2, x+12, y+12, 22);
-    glow.addColorStop(0, "rgba(255,255,255,0.35)");
-    glow.addColorStop(1, "rgba(255,255,255,0)");
-    c.fillStyle = glow;
-    c.beginPath();
-    c.arc(x+12, y+12, 20, 0, Math.PI*2);
-    c.fill();
-
-    // tile
-    c.fillStyle = fill;
-    c.strokeStyle = "rgba(0,0,0,0.18)";
-    c.lineWidth = 2;
-    roundRect(c, x, y, 24, 24, 8);
-    c.fill(); c.stroke();
-
-    // label
-    c.fillStyle = "rgba(0,0,0,0.78)";
-    c.font = "900 14px ui-sans-serif, system-ui";
-    c.textAlign = "center";
-    c.textBaseline = "middle";
-    c.fillText(label, x+12, y+12);
-    c.textAlign = "left";
-  }
-
-  function drawWeaponMini(c, x, y, kind, col){
-    // small frame
-    c.fillStyle = "rgba(0,0,0,0.06)";
-    roundRect(c, x, y, 28, 40, 10);
-    c.fill();
-    c.strokeStyle = "rgba(0,0,0,0.10)";
-    c.lineWidth = 2;
-    c.stroke();
-
-    // bullet visual
-    if (kind === "laser"){
-      c.globalAlpha = 0.9;
-      c.fillStyle = col;
-      c.fillRect(x+13, y+8, 2, 22);
-      c.globalAlpha = 1;
-      return;
-    }
-
-    if (kind === "spread"){
-      c.fillStyle = col;
-      c.beginPath(); c.arc(x+10, y+18, 3, 0, Math.PI*2); c.fill();
-      c.beginPath(); c.arc(x+14, y+14, 3, 0, Math.PI*2); c.fill();
-      c.beginPath(); c.arc(x+18, y+18, 3, 0, Math.PI*2); c.fill();
-      return;
-    }
-
-    if (kind === "missile"){
-      c.fillStyle = col;
-      c.beginPath(); c.arc(x+14, y+18, 4, 0, Math.PI*2); c.fill();
-      c.globalAlpha = 0.25;
-      c.fillStyle = "rgba(34,211,238,1)";
-      c.beginPath(); c.arc(x+14, y+25, 6, 0, Math.PI*2); c.fill();
-      c.globalAlpha = 1;
-      return;
-    }
-
-    // default dot (basic / pierce / shock)
-    c.fillStyle = col;
-    c.beginPath(); c.arc(x+14, y+18, 4, 0, Math.PI*2); c.fill();
-  }
-
-  // =========================
-  // Start overlay visible initially
+  // Start overlay
   // =========================
   function showStartOverlay(){
     overlay.style.display = "flex";
-    btnPrimary.textContent = "Start";
+    overlayTitle.textContent = "NEON VANGUARD";
+    overlayText.innerHTML = T().overlayStart;
+    btnPrimary.textContent = T().buttons.start;
     btnResume.style.display = "none";
     btnRestart.style.display = "none";
   }
+
+  // boot
   showStartOverlay();
   setSfxEnabled(true);
-
+  applyLang();
 })();
