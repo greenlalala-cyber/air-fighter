@@ -57,8 +57,9 @@ body{
 .hudItem .v{ font-size:12px; font-weight:800; }
 
 .hudBtn{
-  width: 34px;
   height: 34px;
+  min-width: 34px;
+  padding: 0 10px;
   border-radius: 999px;
   border:1px solid rgba(0,0,0,.12);
   background: rgba(255,255,255,.70);
@@ -72,6 +73,12 @@ body{
 }
 .hudBtn:hover{ background: rgba(255,255,255,.88); }
 .hudBtn:active{ transform: translateY(1px); }
+
+/* Language pill slightly wider */
+.hudLang{
+  min-width: 44px;
+  letter-spacing: .06em;
+}
 
 .stage{
   flex:1;
@@ -250,9 +257,10 @@ canvas{ width:100%; height:100%; display:block; }
   .title .name{ font-size: 11px; }
   .title .sub{ display:none; }
 
+  /* 2 rows exactly: 3 columns */
   .hud{
     display:grid;
-    grid-template-columns: repeat(2, max-content);
+    grid-template-columns: repeat(3, max-content);
     grid-auto-rows: auto;
     gap: 6px 8px;
     justify-content: end;
@@ -267,7 +275,19 @@ canvas{ width:100%; height:100%; display:block; }
   .hudItem .v{ font-size: 11px; }
 
   .hideMobile{ display:none !important; }
-  .hudBtn{ width: 28px; height: 28px; }
+
+  /* Place row2: Weapon / Lang / ? */
+  /* With current HTML order, this already happens naturally:
+     Row1: Scene Lives HP
+     Row2: Weapon Lang ? */
+
+  .hudBtn{
+    height: 28px;
+    min-width: 28px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+  .hudLang{ min-width: 40px; }
 
   .canvasWrap{ height: min(62vh, 640px); }
 
