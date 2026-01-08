@@ -14,6 +14,45 @@
   const savedLang = localStorage.getItem(LANG_KEY);
   let LANG = (savedLang === "EN" || savedLang === "TC") ? savedLang : "TC";
 
+  // =========================================================
+  // Difficulty (default: CHALLENGE)
+  // =========================================================
+  const DIFF_KEY = "airfighter_difficulty";
+  const DIFF = {
+    BEGINNER: {
+      id: "BEGINNER",
+      label: { EN: "Beginner", TC: "入門" },
+      enemyBulletFreqMult: 0.50,  // bullets -50% (cooldown *2)
+      enemyCountMult: 0.80,       // enemies -20%
+      dropWeaponPotionMult: 1.15, // weapon+potion +15%
+    },
+    CHALLENGE: {
+      id: "CHALLENGE",
+      label: { EN: "Challenge", TC: "挑戰" },
+      enemyBulletFreqMult: 1.00,
+      enemyCountMult: 1.00,
+      dropWeaponPotionMult: 1.00,
+    },
+    HELL: {
+      id: "HELL",
+      label: { EN: "Hell", TC: "地獄" },
+      enemyBulletFreqMult: 1.10,  // bullets +10%
+      enemyCountMult: 1.20,       // enemies +20%
+      dropWeaponPotionMult: 0.90, // weapon+potion -10%
+    }
+  };
+
+  function normalizeDiffId(x){
+    if (x === "BEGINNER" || x === "CHALLENGE" || x === "HELL") return x;
+    return "CHALLENGE";
+  }
+  let difficultyId = normalizeDiffId(localStorage.getItem(DIFF_KEY) || "CHALLENGE"); // default 挑戰
+
+  function getDiff(){ return DIFF[difficultyId]; }
+
+  // =========================================================
+  // I18N
+  // =========================================================
   const I18N = {
     EN: {
       title: "AIR FIGHTER",
@@ -38,6 +77,7 @@
       helpTitle:"ICON GUIDE",
       helpNotes:`Pick any weapon item to switch weapons freely.<br/>
                  Picking the same weapon item upgrades to Lv2/Lv3.`,
+      difficultyTitle:"Difficulty",
       toast: {
         enterScene:(n)=>`Enter Scene ${n}`,
         bossIncoming:(name)=>`Boss incoming — ${name}`,
@@ -78,6 +118,7 @@
       helpTitle:"圖示說明",
       helpNotes:`吃任何一種武器道具可<b>自由切換武器</b>。<br/>
                  吃同款武器道具可升級到 Lv2/Lv3。`,
+      difficultyTitle:"難度",
       toast: {
         enterScene:(n)=>`進入第 ${n} 幕`,
         bossIncoming:(name)=>`首領出現 — ${name}`,
@@ -168,11 +209,45 @@
   const sceneName = (n) => SCENES[n]?.[LANG] ?? SCENES[n]?.EN ?? `Scene ${n}`;
   const weaponName = (id) => weaponById[id]?.name?.[LANG] ?? weaponById[id]?.name?.EN ?? id;
 
+  function diffLabel(id){
+    return DIFF[id]?.label?.[LANG] ?? DIFF[id]?.label?.TC ?? id;
+  }
+
   function showToast(msg){
     toast.textContent = msg;
     toast.classList.add("show");
     clearTimeout(showToast._t);
     showToast._t = setTimeout(() => toast.classList.remove("show"), 1500);
+  }
+
+  function difficultySelectorHTML(){
+    // 只在「尚未開始」顯示的難度選擇 UI
+    const t = T();
+    const cur = difficultyId;
+
+    const mkBtn = (id) => {
+      const active = (id === cur);
+      const base = "padding:10px 12px;border-radius:12px;border:1px solid rgba(0,0,0,0.12);font-weight:900;cursor:pointer;user-select:none;";
+      const act  = "background:rgba(34,211,238,0.22);box-shadow:0 8px 24px rgba(34,211,238,0.20) inset;";
+      const inact= "background:rgba(255,255,255,0.72);";
+      return `<button type="button" data-diff="${id}" style="${base}${active?act:inact}">${diffLabel(id)}</button>`;
+    };
+
+    return `
+      <div style="margin-top:14px; text-align:left;">
+        <div style="font-weight:900; margin-bottom:8px; opacity:0.85;">${t.difficultyTitle}</div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          ${mkBtn("BEGINNER")}
+          ${mkBtn("CHALLENGE")}
+          ${mkBtn("HELL")}
+        </div>
+        <div style="margin-top:8px; font-size:12px; opacity:0.72; line-height:1.45;">
+          <div>入門：敵彈 -50% • 敵量 -20% • 武器+藥水掉落 +15%</div>
+          <div>挑戰：維持目前設定</div>
+          <div>地獄：敵彈 +10% • 敵量 +20% • 武器+藥水掉落 -10%</div>
+        </div>
+      </div>
+    `;
   }
 
   function applyLang(){
@@ -221,7 +296,6 @@
       nextNoteAt: 0,
       step: 0,
       bpm: 132,
-      // simple energetic pattern
       bass: [0,0, -5,0, 0,0, -7,0, 0,0, -5,0, 0,0, -7,0],
       lead: [7, 9, 12, 9, 7, 9, 12, 14, 12, 9, 7, 9, 12, 9, 7, 4],
     }
@@ -237,7 +311,7 @@
     audio.sfxGain = audio.ctx.createGain();
     audio.musicGain = audio.ctx.createGain();
 
-    // "SFX=100%" -> 0.30, "Music=80%" -> 0.24
+    // SFX=100% -> 0.30 ; Music=80% -> 0.24
     audio.sfxGain.gain.value = 0.30;
     audio.musicGain.gain.value = 0.24;
 
@@ -313,19 +387,19 @@
 
   function musicNote({midi=60, dur=0.12, type="sawtooth", gain=0.06, detune=0, cutoff=900, when}){
     if (!audio.enabled || !audio.ready) return;
-    const ctx = audio.ctx;
-    const t0 = when ?? ctx.currentTime;
+    const ctxA = audio.ctx;
+    const t0 = when ?? ctxA.currentTime;
 
-    const osc = ctx.createOscillator();
+    const osc = ctxA.createOscillator();
     osc.type = type;
     osc.frequency.setValueAtTime(midiToHz(midi), t0);
     osc.detune.setValueAtTime(detune, t0);
 
-    const filt = ctx.createBiquadFilter();
+    const filt = ctxA.createBiquadFilter();
     filt.type = "lowpass";
     filt.frequency.setValueAtTime(cutoff, t0);
 
-    const g = ctx.createGain();
+    const g = ctxA.createGain();
     g.gain.setValueAtTime(0.0001, t0);
     g.gain.exponentialRampToValueAtTime(gain, t0 + 0.01);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
@@ -343,12 +417,7 @@
     ensureAudio();
     if (!audio.ready) return;
     audio.music.running = true;
-    // schedule slightly ahead
     audio.music.nextNoteAt = audio.ctx.currentTime + 0.05;
-  }
-
-  function stopMusic(){
-    audio.music.running = false;
   }
 
   function updateMusic(){
@@ -357,22 +426,18 @@
     const m = audio.music;
 
     const secPerBeat = 60 / m.bpm;
-    const stepDur = secPerBeat / 2; // 1/8 notes feel
+    const stepDur = secPerBeat / 2;
 
     while (m.nextNoteAt < ctxA.currentTime + 0.20){
       const step = m.step % 16;
-
-      // Bass (square)
-      const baseMidi = 45; // A2-ish
+      const baseMidi = 45;
       const bassOff = m.bass[step];
       musicNote({ midi: baseMidi + bassOff, dur: stepDur * 0.95, type:"square", gain:0.035, cutoff:520, when:m.nextNoteAt });
 
-      // Lead (saw)
-      const leadMidi = 69; // A4
+      const leadMidi = 69;
       const leadOff = m.lead[step];
       musicNote({ midi: leadMidi + leadOff, dur: stepDur * 0.75, type:"sawtooth", gain:0.020, cutoff:1200, detune: (step%2? -7: 7), when:m.nextNoteAt });
 
-      // Hi-hat tick (triangle)
       if (step % 2 === 0){
         musicNote({ midi: 96, dur: 0.03, type:"triangle", gain:0.010, cutoff:2200, when:m.nextNoteAt });
       }
@@ -464,7 +529,7 @@
   btnSound.addEventListener("click", () => {
     ensureAudio();
     setAudioEnabled(!audio.enabled);
-    applyLang(); // update button text
+    applyLang();
   });
 
   btnLang.addEventListener("click", (e) => {
@@ -473,7 +538,6 @@
     LANG = (LANG === "EN") ? "TC" : "EN";
     localStorage.setItem(LANG_KEY, LANG);
     applyLang();
-    // overlay content language refresh if open
     if (overlay.style.display !== "none"){
       if (!state.running) showStartOverlay();
       else if (state.paused) openPausedOverlay();
@@ -492,24 +556,19 @@
     phase:"wave",
     waveStartTime:0,
 
-    // scrolling background
     bgScroll:0,
 
-    // difficulty / drop / luck
     luck:1.0,
     dropBoost:0,
     spawnAcc:0,
 
-    // FX / camera
     fx:[],
     shake:0,
     flash:0,
 
-    // death slow
     deathSlow:0,
     deathSeq:0,
 
-    // shield animation (0..1)
     shieldAnim:0,
   };
 
@@ -527,13 +586,12 @@
 
     invuln:0,
 
-    // weapon system
     weaponId:"basic",
-    weaponLv:1, // 1..3
+    weaponLv:1,
     weaponHeat:0,
     missileCD:0,
 
-    fireRateLv:0, // 0..2
+    fireRateLv:0,
     deadHidden:false,
   };
 
@@ -543,7 +601,7 @@
   const drops = [];
   let boss = null;
 
-  // Scene tuning
+  // Scene tuning (目前=挑戰)
   const sceneConfig = {
     1: { enemyRate:0.95, baseEnemyHP:9,  bulletSpeed:145, bossHP:430, enemyFireMult:0.50, bossFireMult:0.56 },
     2: { enemyRate:0.72, baseEnemyHP:12, bulletSpeed:175, bossHP:650, enemyFireMult:0.70, bossFireMult:0.78 },
@@ -613,8 +671,26 @@
   function closeOverlay(){ overlay.style.display = "none"; }
 
   function showStartOverlay(){
-    openOverlay(T().title, T().overlayStart, { primary:T().buttons.start, showResume:false, showRestart:false });
+    openOverlay(
+      T().title,
+      `${T().overlayStart}${difficultySelectorHTML()}`,
+      { primary:T().buttons.start, showResume:false, showRestart:false }
+    );
+
+    // 綁定難度按鈕（只在尚未開始）
+    const btns = overlayText.querySelectorAll("button[data-diff]");
+    btns.forEach(b => {
+      b.addEventListener("click", (e) => {
+        e.preventDefault();
+        const id = normalizeDiffId(b.getAttribute("data-diff"));
+        difficultyId = id;
+        localStorage.setItem(DIFF_KEY, difficultyId);
+        // 重新渲染 start overlay 讓按鈕高亮同步
+        showStartOverlay();
+      });
+    });
   }
+
   function openPausedOverlay(){
     openOverlay(T().pausedTitle, T().pausedText, { primary:T().buttons.how, showResume:true, showRestart:true });
   }
@@ -634,7 +710,7 @@
   }
 
   // =========================================================
-  // Help popup (FIXED: ? always works)
+  // Help popup
   // =========================================================
   function roundRect(c, x, y, w, h, r){
     c.beginPath();
@@ -699,7 +775,6 @@
       const g = hc.getContext("2d");
       g.clearRect(0,0,hc.width,hc.height);
 
-      // panel bg
       const grad = g.createLinearGradient(0,0,0,hc.height);
       grad.addColorStop(0, "rgba(255,255,255,0.95)");
       grad.addColorStop(1, "rgba(255,255,255,0.78)");
@@ -713,12 +788,10 @@
 
       g.fillStyle = "rgba(0,0,0,0.72)";
       g.font = "900 12px ui-sans-serif, system-ui";
-      g.fillText(LANG==="EN" ? "Items" : "道具", 14, 20);
+      g.fillText(LANG==="EN" ? "Weapon Items" : "武器道具", 14, 20);
 
-      // weapon items row
       let x = 14, y = 32;
       const spacing = 52;
-
       for (let i=1;i<WEAPONS.length;i++){
         const w = WEAPONS[i];
         drawItemIcon(g, x, y, w.color.replace("0.95","0.90"), w.icon);
@@ -728,10 +801,9 @@
         g.fillText(`${weaponName(w.id)}`, x+12, y+38);
         g.textAlign = "left";
         x += spacing;
-        if (i===3){ x = 14; y += 54; } // wrap
+        if (i===3){ x = 14; y += 54; }
       }
 
-      // misc items
       g.fillStyle = "rgba(0,0,0,0.72)";
       g.font = "900 12px ui-sans-serif, system-ui";
       g.fillText(LANG==="EN" ? "Other" : "其他", 14, 154);
@@ -770,7 +842,6 @@
       requestAnimationFrame(tick);
       return;
     }
-    // when already running: show how
     openOverlay(T().howTitle, T().howText, { primary:T().buttons.how, showResume:true, showRestart:true });
   });
 
@@ -791,7 +862,7 @@
   });
 
   // =========================================================
-  // Drops (weapon items + potion + fire rate + life up)
+  // Drops
   // =========================================================
   function spawnDrop(x, y, kind, weaponId=null){
     drops.push({ x, y, r: 12, kind, weaponId, vy: 120, t: 0 });
@@ -799,14 +870,15 @@
 
   function tryDropFromEnemy(x, y){
     const luck = state.luck * (1 + state.dropBoost);
+    const diff = getDiff();
 
-    // overall drop chance
+    // overall drop chance (維持原本，不去動它，避免改到你說的「其餘設定不改」太多)
     const anyP = clamp(0.25 * luck, 0, 0.85);
     if (!chance(anyP)) return;
 
-    // weapon items more common, but randomized type
-    const wWeapon = 0.62;
-    const wPotion = 0.14;
+    // weights：只針對「武器 + 藥水」套難度倍率（其餘不變）
+    let wWeapon = 0.62 * diff.dropWeaponPotionMult;
+    let wPotion = 0.14 * diff.dropWeaponPotionMult;
     const wFire   = 0.18;
     const wLife   = 0.06 * 0.25; // rare-ish
 
@@ -826,7 +898,6 @@
       return;
     }
 
-    // weapon item: choose one weapon (not basic) uniformly
     const pool = WEAPONS.slice(1);
     const pick = pool[Math.floor(Math.random() * pool.length)];
     spawnDrop(x, y, "weapon", pick.id);
@@ -835,10 +906,8 @@
   function pickWeaponItem(id){
     const cur = player.weaponId;
     if (id === cur){
-      // level up to 3
       player.weaponLv = clamp(player.weaponLv + 1, 1, 3);
     } else {
-      // switch freely
       player.weaponId = id;
       player.weaponLv = 1;
     }
@@ -871,7 +940,7 @@
     if (kind === "drone"){
       e = { kind, x, y, r:16, hp:cfg.baseEnemyHP, spd:rand(62,105)+(state.scene-1)*8, t:0, shootCD:rand(1.2,1.8) };
     } else if (kind === "sweeper"){
-      e = { kind, x, y, r:18, hp:cfg.baseEnemyHP+5, spd:rand(54,92), t:0, shootCD:rand(1.2,2.0), dir: chance(0.5)?-1:1 };
+      e = { kind, x, y, r:18, hp:cfg.baseEnemyHP+5, spd:rand(54,92), t:0, shootCD:rand(1.2,2.0), dir: Math.random()<0.5?-1:1 };
     } else if (kind === "sniper"){
       e = { kind, x, y, r:17, hp:cfg.baseEnemyHP+3, spd:rand(50,86), t:0, shootCD:rand(1.7,2.6), windup:0 };
     } else {
@@ -887,7 +956,7 @@
       type: bossTypes[state.scene - 1],
       x: W/2, y: -100, r: 52,
       hp: cfg.bossHP, hpMax: cfg.bossHP,
-      t: 0, enter: 1.2, shot: 0, drift: chance(0.5)?-1:1
+      t: 0, enter: 1.2, shot: 0, drift: Math.random()<0.5?-1:1
     };
     state.phase = "boss";
     showToast(T().toast.bossIncoming(sceneName(state.scene)));
@@ -905,10 +974,6 @@
       state.phase = "wave";
       state.waveStartTime = state.t;
 
-      // carry weapon to next scene (as you requested earlier)
-      // (no reset)
-
-      // brief invuln
       player.invuln = Math.max(player.invuln, 1.0);
       state.shieldAnim = 0;
 
@@ -926,7 +991,7 @@
   }
 
   // =========================================================
-  // Bullets & Shooting (weapon level affects patterns)
+  // Shooting
   // =========================================================
   function fireCooldown(base){
     return base * FIRE_RATE_MULT[player.fireRateLv];
@@ -940,7 +1005,6 @@
     const w = weaponById[wid] ?? weaponById.basic;
     const pan = clamp((player.x / W) * 2 - 1, -1, 1);
 
-    // base cadence per weapon
     const baseCd = {
       basic:    0.24,
       spread:   0.22,
@@ -951,7 +1015,7 @@
     }[wid] ?? 0.24;
 
     if (wid === "basic"){
-      const dmg = 7 + lv; // 8/9/10
+      const dmg = 7 + lv;
       bullets.push({ x:player.x, y:player.y-18, vx:0, vy:-520, r:4, dmg, kind:"basic", color:w.color });
       player.weaponHeat = fireCooldown(baseCd);
       sfx.shootSoft(pan);
@@ -972,7 +1036,6 @@
     }
 
     if (wid === "laser"){
-      // lv affects thickness + dmg
       bullets.push({ x:player.x, y:player.y-22, vx:0, vy:-880, r:(lv===1?3:lv===2?4:5), dmg:(9+lv*2), kind:"laser", pierce:(lv===3?2:1), color:w.color });
       player.weaponHeat = fireCooldown(baseCd);
       sfx.shootLaser(pan);
@@ -980,7 +1043,6 @@
     }
 
     if (wid === "missiles"){
-      // always fire a core shot + missiles by level
       bullets.push({ x:player.x, y:player.y-18, vx:0, vy:-540, r:4, dmg:(7+lv), kind:"basic", color:weaponById.basic.color });
 
       if (player.missileCD <= 0){
@@ -998,7 +1060,6 @@
     }
 
     if (wid === "piercer"){
-      // lv affects count
       const offsets = (lv === 1) ? [-10, 10] : (lv === 2) ? [-16, 0, 16] : [-22, -8, 8, 22];
       for (const ox of offsets){
         bullets.push({ x:player.x+ox, y:player.y-20, vx:0, vy:-820, r:3, dmg:(8+lv), kind:"pierce", pierce:2, color:w.color });
@@ -1009,7 +1070,6 @@
     }
 
     if (wid === "shock"){
-      // lv affects pierce + small chain feel (visual only)
       bullets.push({ x:player.x, y:player.y-22, vx:0, vy:-820, r:4, dmg:(7+lv), kind:"shock", pierce:(lv===1?2:lv===2?3:5), color:w.color });
       if (lv >= 2){
         bullets.push({ x:player.x-10, y:player.y-18, vx:-40, vy:-780, r:3, dmg:(5+lv), kind:"shock", pierce:2, color:w.color });
@@ -1061,7 +1121,7 @@
         t:0,
         life: rand(0.45, 0.98),
         r: rand(1.4, 3.8),
-        hue: chance(0.5) ? "rgba(34,211,238," : "rgba(47,91,255,"
+        hue: (Math.random()<0.5) ? "rgba(34,211,238," : "rgba(47,91,255,"
       });
     }
   }
@@ -1079,14 +1139,13 @@
     state.deathSeq  = 0.20;
 
     player.deadHidden = true;
-    player.invuln = 999; // block hits during sequence
+    player.invuln = 999;
     firing = false;
   }
 
   function finalizeDeath(){
     player.lives -= 1;
 
-    // lose all earned weapon power (as you required earlier)
     player.weaponId = "basic";
     player.weaponLv = 1;
     player.fireRateLv = 0;
@@ -1101,13 +1160,9 @@
 
     if (player.lives > 0){
       player.hp = player.hpMax;
-
-      // 10s invuln + shield expand
       player.invuln = 10.0;
       state.shieldAnim = 0;
-
       player.deadHidden = false;
-
       showToast(T().toast.lifeLost(state.luck.toFixed(2)));
     } else {
       openOverlay(
@@ -1143,11 +1198,8 @@
 
   function update(dt){
     state.t += dt;
-
-    // audio music scheduler
     updateMusic();
 
-    // timers
     state.flash = Math.max(0, state.flash - dt * 4.8);
     state.deathSlow = Math.max(0, state.deathSlow - dt);
 
@@ -1162,16 +1214,14 @@
     state.shake = Math.max(0, state.shake - dt * 1.8);
     state.dropBoost = Math.max(0, state.dropBoost - dt * 0.08);
 
-    // shield expand
     if (player.invuln > 0 && player.invuln < 900 && state.shieldAnim < 1){
       state.shieldAnim = clamp(state.shieldAnim + dt / 0.55, 0, 1);
     }
 
-    // background scroll varies by scene
     const bgSpeed = (state.scene === 1) ? 210 : (state.scene === 2) ? 260 : 310;
     state.bgScroll = (state.bgScroll + bgSpeed * dtWorld) % 100000;
 
-    // player
+    // player move
     if (state.deathSeq <= 0){
       let mx=0,my=0;
       if (keys.has("ArrowLeft") || keys.has("KeyA")) mx -= 1;
@@ -1190,10 +1240,7 @@
       player.y = clamp(player.y, 56, H-24);
     }
 
-    // invuln uses world dt (focus doesn't extend it)
     player.invuln = Math.max(0, player.invuln - dtWorld);
-
-    // cooldowns
     player.weaponHeat = Math.max(0, player.weaponHeat - dtWorld);
     player.missileCD = Math.max(0, player.missileCD - dtWorld);
 
@@ -1201,6 +1248,7 @@
 
     // waves
     const cfg = sceneConfig[state.scene];
+    const diff = getDiff();
     const baseWave = (26 + state.scene * 4);
     const waveDuration = baseWave * 8;
 
@@ -1211,11 +1259,11 @@
       if (waveElapsed > waveDuration){
         startBoss();
       } else {
-        state.spawnAcc += dtWorld * cfg.enemyRate;
+        // ✅ 難度：敵人數量倍率
+        state.spawnAcc += dtWorld * cfg.enemyRate * diff.enemyCountMult;
         while (state.spawnAcc >= 1){
           state.spawnAcc -= 1;
 
-          // scene 1 more enemies but lower bullet rate already tuned
           const roll = Math.random();
           if (state.scene === 1){
             if (roll < 0.55) spawnEnemy("drone");
@@ -1254,7 +1302,8 @@
 
       e.shootCD -= dtWorld;
       if (e.shootCD <= 0){
-        const mult = cfg.enemyFireMult;
+        // ✅ 難度：敵人子彈頻率倍率
+        const mult = cfg.enemyFireMult * diff.enemyBulletFreqMult;
         const sp = cfg.bulletSpeed;
 
         if (e.kind === "drone"){
@@ -1306,7 +1355,8 @@
       }
 
       boss.shot -= dtWorld;
-      const fireMult = cfg.bossFireMult;
+      // ✅ 難度：敵人子彈頻率倍率（Boss 也算敵人）
+      const fireMult = cfg.bossFireMult * diff.enemyBulletFreqMult;
 
       if (boss.shot <= 0){
         boss.shot = 0.30 / fireMult;
@@ -1490,7 +1540,6 @@
     drawPlayer();
     drawCanvasHP();
 
-    // screen flash on death
     if (state.flash > 0){
       ctx.globalAlpha = clamp(state.flash, 0, 1) * 0.85;
       ctx.fillStyle = "rgba(255,255,255,1)";
@@ -1500,14 +1549,12 @@
   }
 
   function drawBackground(){
-    // Scene-specific backgrounds
     if (state.scene === 1) drawBG_Sky();
     else if (state.scene === 2) drawBG_Ion();
     else drawBG_Void();
   }
 
   function drawBG_Sky(){
-    // light blue sky + clouds + lane lines
     const g = ctx.createLinearGradient(0,0,0,H);
     g.addColorStop(0, "rgba(210,245,255,1)");
     g.addColorStop(1, "rgba(165,220,255,1)");
@@ -1549,7 +1596,6 @@
   }
 
   function drawBG_Ion(){
-    // ion stream: teal/purple gradient + diagonal streaks
     const g = ctx.createLinearGradient(0,0,W,H);
     g.addColorStop(0, "rgba(203,245,255,1)");
     g.addColorStop(0.55, "rgba(175,230,255,1)");
@@ -1586,7 +1632,6 @@
   }
 
   function drawBG_Void(){
-    // dark-ish aurora feel but still modern clean (not too dark)
     const g = ctx.createLinearGradient(0,0,0,H);
     g.addColorStop(0, "rgba(195,230,255,1)");
     g.addColorStop(0.55, "rgba(170,210,255,1)");
@@ -1596,7 +1641,6 @@
 
     const s = state.bgScroll;
 
-    // aurora ribbons
     ctx.globalAlpha = 0.16;
     for (let k=0;k<3;k++){
       const y = ((s*0.45) + k*210) % (H+260) - 130;
@@ -1612,7 +1656,6 @@
     }
     ctx.globalAlpha = 1;
 
-    // star particles
     ctx.globalAlpha = 0.25;
     ctx.fillStyle = "rgba(255,255,255,1)";
     for (let i=0;i<140;i++){
@@ -1621,6 +1664,20 @@
       ctx.fillRect(x, yy, 1.5, 1.5);
     }
     ctx.globalAlpha = 1;
+  }
+
+  function roundRectDraw(c, x, y, w, h, r){
+    c.beginPath();
+    c.moveTo(x+r, y);
+    c.lineTo(x+w-r, y);
+    c.quadraticCurveTo(x+w, y, x+w, y+r);
+    c.lineTo(x+w, y+h-r);
+    c.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+    c.lineTo(x+r, y+h);
+    c.quadraticCurveTo(x, y+h, x, y+h-r);
+    c.lineTo(x, y+r);
+    c.quadraticCurveTo(x, y, x+r, y);
+    c.closePath();
   }
 
   function drawFX(){
@@ -1653,14 +1710,11 @@
     if (player.deadHidden) return;
 
     const inv = player.invuln > 0 && player.invuln < 900;
-
-    // blink
     if (inv && Math.floor(state.t*18) % 2 === 0) ctx.globalAlpha = 0.75;
 
     ctx.save();
     ctx.translate(player.x, player.y);
 
-    // shield expand at respawn
     if (inv){
       const p = state.shieldAnim;
       const r = lerp(10, 34, p);
@@ -1681,14 +1735,12 @@
       ctx.globalAlpha = 1;
     }
 
-    // thruster
     ctx.globalAlpha = 0.45;
     ctx.fillStyle = inv ? "rgba(245,158,11,1)" : "rgba(34,211,238,1)";
     ctx.beginPath();
     ctx.ellipse(0, 18, 7, 14, 0, 0, Math.PI*2);
     ctx.fill();
 
-    // body: gold when invulnerable
     const body = ctx.createLinearGradient(-18, -18, 18, 18);
     if (inv){
       body.addColorStop(0, "rgba(255,215,102,1)");
@@ -1708,13 +1760,11 @@
     ctx.closePath();
     ctx.fill();
 
-    // cockpit
     ctx.fillStyle = "rgba(255,255,255,0.86)";
     ctx.beginPath();
     ctx.ellipse(0, -4, 6, 10, 0, 0, Math.PI*2);
     ctx.fill();
 
-    // focus ring
     if (focus){
       ctx.globalAlpha = 0.28;
       ctx.strokeStyle = "rgba(0,0,0,0.65)";
@@ -1877,20 +1927,6 @@
     }
   }
 
-  function roundRectDraw(c, x, y, w, h, r){
-    c.beginPath();
-    c.moveTo(x+r, y);
-    c.lineTo(x+w-r, y);
-    c.quadraticCurveTo(x+w, y, x+w, y+r);
-    c.lineTo(x+w, y+h-r);
-    c.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
-    c.lineTo(x+r, y+h);
-    c.quadraticCurveTo(x, y+h, x, y+h-r);
-    c.lineTo(x, y+r);
-    c.quadraticCurveTo(x, y, x+r, y);
-    c.closePath();
-  }
-
   function drawCanvasHP(){
     const pad = 10;
     const w = 210;
@@ -1959,7 +1995,6 @@
 
     update(dt);
 
-    // camera shake
     if (state.shake > 0){
       const s = state.shake;
       const dx = (Math.random()*2 - 1) * 10 * s;
