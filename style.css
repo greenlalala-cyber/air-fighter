@@ -218,3 +218,65 @@ canvas{ width:100%; height:100%; display:block; }
   .actions{ flex-direction:column; }
   .btn.action{ width:100%; }
 }
+/* =========================
+   Mobile layout improvements
+   ========================= */
+@media (max-width: 520px){
+  /* 2) Reduce upper info area height */
+  .topbar{
+    padding: 6px 10px;              /* was larger */
+    gap: 8px;
+  }
+
+  .title .name{
+    font-size: 11px;                /* slightly smaller */
+  }
+
+  .title .sub{
+    display: none;                  /* remove subtitle to save vertical space */
+  }
+
+  .hud{
+    gap: 6px;                       /* tighter */
+  }
+
+  .hudItem{
+    padding: 5px 8px;               /* smaller pills */
+    gap: 6px;
+  }
+
+  .hudItem .k,
+  .hudItem .v{
+    font-size: 11px;                /* tighter text */
+  }
+
+  /* Keep canvas + controls from pushing content too far down */
+  .stage{
+    padding: 10px;
+    gap: 8px;
+  }
+
+  /* 1) Double size for FIRE button (compared to others) */
+  .actions{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-auto-rows: auto;
+    gap: 10px;
+  }
+
+  #btnFire{
+    grid-column: 1 / span 2;        /* FIRE takes full row */
+    height: 104px;                  /* ~2x */
+    font-size: 18px;                /* larger label */
+    border-radius: 20px;
+  }
+
+  /* Keep Focus/Pause normal size */
+  #btnFocus,
+  #btnPause{
+    height: 52px;
+    font-size: 14px;
+    border-radius: 16px;
+  }
+}
+
