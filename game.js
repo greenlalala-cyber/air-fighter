@@ -23,12 +23,7 @@
     return (d===DIFF.EASY||d===DIFF.NORMAL||d===DIFF.HARD)?d:DIFF.NORMAL;
   })();
 
-  /**
-   * ✅ 修正「導彈後入門/挑戰太簡單、地獄太難」
-   * - 入門：子彈略少，但敵人數量略多（避免拿導彈後空場）
-   * - 挑戰：敵人數量稍上修（避免導彈變無腦）
-   * - 地獄：倍率降到合理（仍很難），保留多方出怪 + boss adds + 第三關雙boss
-   */
+  // ✅ 導彈後難度平衡（沿用你之前版本）
   const DIFF_MODS = {
     [DIFF.EASY]:   { bulletMult: 0.90, spawnMult: 1.10, dropMult: 1.08, focusLimited:false },
     [DIFF.NORMAL]: { bulletMult: 1.00, spawnMult: 1.18, dropMult: 1.00, focusLimited:true  },
@@ -42,15 +37,13 @@
   const I18N={
     EN:{
       title:"AIR FIGHTER",
-      sub:"3 scenes • upgrades • bosses",
-      hud:{scene:"Scene",lives:"Lives",hp:"HP",weapon:"Weapon",fire:"Fire",luck:"Luck",sfx:"SFX"},
+      hud:{scene:"Scene",lives:"Lives"},
       btn:{start:"Start",resume:"Resume",restart:"Restart"},
       mobile:{fire:"FIRE (Space)",focus:"FOCUS (Shift)",pause:"PAUSE (P)"},
       audio:{on:"Audio: ON",off:"Audio: OFF"},
       toast:{
         enter:(n)=>`Enter Scene ${n}`,
         sceneNow:(n,name)=>`Scene ${n} — ${name}`,
-        boss:"BOSS INCOMING",
         bossName:(name)=>`Boss incoming — ${name}`,
         bossDown:(n)=>`Boss defeated — Scene ${n}`,
         potion:"Potion: HP full",
@@ -80,15 +73,13 @@
     },
     TC:{
       title:"咻咻戰鬥機",
-      sub:"3 幕 • 升級 • 首領",
-      hud:{scene:"場景",lives:"生命",hp:"血量",weapon:"武器",fire:"射速",luck:"幸運",sfx:"音效"},
+      hud:{scene:"場景",lives:"生命"},
       btn:{start:"開始",resume:"繼續",restart:"重來"},
       mobile:{fire:"開火 (Space)",focus:"精準 (Shift)",pause:"暫停 (P)"},
       audio:{on:"音效/音樂：開",off:"音效/音樂：關"},
       toast:{
         enter:(n)=>`進入第 ${n} 幕`,
         sceneNow:(n,name)=>`第 ${n} 幕 — ${name}`,
-        boss:"首領來襲",
         bossName:(name)=>`首領出現 — ${name}`,
         bossDown:(n)=>`首領擊破 — 第 ${n} 幕`,
         potion:"藥水：血量回滿",
@@ -130,20 +121,43 @@
   const FIRE_RATE_MULT=[1.00,0.82,0.68];
 
   // =========================================================
+  // ✅ NEW: Stage scaling (harder per scene)
+  //   - HP up per scene
+  //   - damage taken slightly reduced per scene (more tanky)
+  // =========================================================
+  function stageHPScale(scene){
+    if(scene===1) return 1.00;
+    if(scene===2) return 1.18;
+    return 1.36; // scene 3
+  }
+  function stageDmgTakenScale(scene){
+    // lower = tankier
+    if(scene===1) return 1.00;
+    if(scene===2) return 0.93;
+    return 0.86;
+  }
+  function stageBossHPScale(scene){
+    if(scene===1) return 1.00;
+    if(scene===2) return 1.12;
+    return 1.26;
+  }
+
+  // =========================================================
   // Weapons & item colors
   // =========================================================
   const WEAPONS=[
     {id:"basic",icon:"●",name:{EN:"Basic",TC:"基礎"},color:"rgba(20,20,20,0.78)"},
-    {id:"spread",icon:"≋",name:{EN:"Spread",TC:"散射"},color:"rgba(245,203,45,0.95)"}, // 黃
+    // ✅ 深黃色（更清楚）
+    {id:"spread",icon:"≋",name:{EN:"Spread",TC:"散射"},color:"rgba(184,134,11,0.98)"},
     {id:"laser",icon:"┃",name:{EN:"Laser",TC:"雷射"},color:"rgba(34,211,238,0.95)"},
     {id:"missiles",icon:"➤",name:{EN:"Missiles",TC:"導彈"},color:"rgba(124,92,255,0.95)"},
-    {id:"piercer",icon:"▮",name:{EN:"Piercer",TC:"貫穿"},color:"rgba(220,220,220,0.95)"}, // 淺灰
+    {id:"piercer",icon:"▮",name:{EN:"Piercer",TC:"貫穿"},color:"rgba(220,220,220,0.95)"},
     {id:"shock",icon:"ϟ",name:{EN:"Shock",TC:"電擊"},color:"rgba(16,185,129,0.95)"},
   ];
   const weaponById=Object.fromEntries(WEAPONS.map(w=>[w.id,w]));
   const weaponName=(id)=>weaponById[id]?.name?.[LANG]||weaponById[id]?.name?.EN||id;
 
-  const POTION_FILL="rgba(255,160,160,0.92)"; // 淡紅
+  const POTION_FILL="rgba(255,160,160,0.92)";
   const LIFE_RED="rgba(239,68,68,0.95)";
   const LIFE_GOLD="rgba(245,158,11,0.95)";
 
@@ -156,22 +170,9 @@
 
   const hudScene=document.getElementById("hudScene");
   const hudLives=document.getElementById("hudLives");
-  const hudHP=document.getElementById("hudHP");
-  const hudWeapon=document.getElementById("hudWeapon");
-  const hudFire=document.getElementById("hudFire");
-  const hudLuck=document.getElementById("hudLuck");
-  const hudSfx=document.getElementById("hudSfx");
-
   const lblScene=document.getElementById("lblScene");
   const lblLives=document.getElementById("lblLives");
-  const lblHP=document.getElementById("lblHP");
-  const lblWeapon=document.getElementById("lblWeapon");
-  const lblFire=document.getElementById("lblFire");
-  const lblLuck=document.getElementById("lblLuck");
-  const lblSfx=document.getElementById("lblSfx");
-
   const brandName=document.getElementById("brandName");
-  const brandSub=document.getElementById("brandSub");
 
   const btnHelp=document.getElementById("btnHelp");
   const btnLang=document.getElementById("btnLang");
@@ -222,7 +223,6 @@
     audio.gain=audio.ctx.createGain();
     audio.musicGain=audio.ctx.createGain();
 
-    // ✅ 需求：BGM 與 SFX 都 100%（同一音量基準）
     audio.gain.gain.value=0.45;
     audio.musicGain.gain.value=0.45;
 
@@ -273,10 +273,8 @@
       audio.musicGain.gain.value=on?0.45:0;
     }
     btnSound.textContent=on?T().audio.on:T().audio.off;
-    hudSfx.textContent=on?(LANG==="EN"?"ON":"開"):(LANG==="EN"?"OFF":"關");
   }
 
-  // Music (simple arpeggio)
   function midiToHz(m){ return 440*Math.pow(2,(m-69)/12); }
   function musicNote({midi=60,dur=0.12,type="sawtooth",gain=0.06,cutoff=1200,when}){
     if(!audio.enabled || !audio.ready) return;
@@ -468,7 +466,7 @@
 
   const player={
     x:W/2,y:H*0.78,r:14,
-    spd:340,                 // ✅ 更靈敏一點
+    spd:340,
     hp:10,hpMax:10,
     lives:3,livesMax:6,
     invuln:0,
@@ -488,12 +486,23 @@
   const drops=[];
   let bosses=[];
 
-  // Base config per scene（挑戰基準）
+  // ✅ 更耐打：每關基礎HP上調（沿用原值）
   const sceneCfg={
-    1:{ enemyRate:0.90, baseEnemyHP:9,  bulletSpeed:145, bossHP:430, enemyFireMult:0.45, bossFireMult:0.55 },
-    2:{ enemyRate:0.72, baseEnemyHP:12, bulletSpeed:175, bossHP:650, bossHP2:520, enemyFireMult:0.65, bossFireMult:0.78 },
-    3:{ enemyRate:0.84, baseEnemyHP:15, bulletSpeed:205, bossHP:900, bossHP2:720, enemyFireMult:0.85, bossFireMult:0.96 },
+    1:{ enemyRate:0.90, baseEnemyHP:12, bulletSpeed:145, bossHP:430, enemyFireMult:0.45, bossFireMult:0.55 },
+    2:{ enemyRate:0.72, baseEnemyHP:16, bulletSpeed:175, bossHP:650, bossHP2:520, enemyFireMult:0.65, bossFireMult:0.78 },
+    3:{ enemyRate:0.84, baseEnemyHP:20, bulletSpeed:205, bossHP:900, bossHP2:720, enemyFireMult:0.85, bossFireMult:0.96 },
   };
+
+  // 不同敵人耐打差異：HP乘數 + 防禦係數(受傷倍率)
+  const ENEMY_DURABILITY = {
+    drone:  { hpMul: 1.00, dmgMul: 1.00 },
+    sniper: { hpMul: 1.18, dmgMul: 0.92 },
+    sweeper:{ hpMul: 1.42, dmgMul: 0.85 },
+    bomber: { hpMul: 1.75, dmgMul: 0.80 },
+  };
+
+  // Boss 血量倍率（沿用）
+  const BOSS_HP_MULT = 1.55;
 
   // =========================================================
   // Overlay
@@ -575,7 +584,6 @@
   }
 
   function openPausedOverlay(){
-    const t=T();
     openOverlay(
       LANG==="EN"?"PAUSED":"已暫停",
       LANG==="EN"
@@ -611,7 +619,6 @@
       requestAnimationFrame(tick);
       return;
     }
-    // show how-to overlay
     openHelp(true);
   });
 
@@ -632,21 +639,15 @@
   });
 
   // =========================================================
-  // Apply Language to HUD/Buttons
+  // Apply Language to HUD/Buttons (HUD 簡化版)
   // =========================================================
   function applyLang(){
     const t=T();
     document.title=t.title;
     brandName.textContent=t.title;
-    brandSub.textContent=t.sub;
 
     lblScene.textContent=t.hud.scene;
     lblLives.textContent=t.hud.lives;
-    lblHP.textContent=t.hud.hp;
-    lblWeapon.textContent=t.hud.weapon;
-    lblFire.textContent=t.hud.fire;
-    lblLuck.textContent=t.hud.luck;
-    lblSfx.textContent=t.hud.sfx;
 
     btnFire.textContent=t.mobile.fire;
     btnFocus.textContent=t.mobile.focus;
@@ -654,7 +655,6 @@
 
     btnLang.textContent=LANG;
     btnSound.textContent=audio.enabled?t.audio.on:t.audio.off;
-    hudSfx.textContent=audio.enabled?(LANG==="EN"?"ON":"開"):(LANG==="EN"?"OFF":"關");
 
     if(!state.running) showStartOverlay();
   }
@@ -817,14 +817,13 @@
     const dm=diffMods();
     const luck=state.luck*(1+state.dropBoost);
 
-    // ✅ 基礎掉落機率（你先前要求降低過，現在維持偏低，並乘上難度 dropMult）
     const anyP = clamp(0.25 * luck * dm.dropMult, 0, 0.70);
     if(!chance(anyP)) return;
 
     const wWeapon = 0.62;
     const wPotion = 0.14;
     const wFire   = 0.18;
-    const wLife   = 0.06 * 0.25; // 稀有生命
+    const wLife   = 0.06 * 0.25;
 
     const sum=wWeapon+wPotion+wFire+wLife;
     let r=Math.random()*sum;
@@ -866,21 +865,35 @@
     if(from==="left"){ x=-30; y=rand(40,H*0.5); vx0=rand(55,95); }
     if(from==="right"){ x=W+30; y=rand(40,H*0.5); vx0=-rand(55,95); }
 
+    const d=ENEMY_DURABILITY[kind] || {hpMul:1,dmgMul:1};
+
+    // ✅ stage scaling：越後面越硬
+    const hpScale = stageHPScale(state.scene);
+    const takenScale = stageDmgTakenScale(state.scene);
+
+    const baseHP = cfg.baseEnemyHP * d.hpMul * hpScale;
+    const dmgMul = (d.dmgMul ?? 1) * takenScale; // 玩家子彈造成傷害倍率（越後面越小 → 越硬）
+
     let e;
     if(kind==="drone"){
-      e={kind,x,y,r:16,hp:cfg.baseEnemyHP,spd:rand(62,105)+(state.scene-1)*8,t:0,shootCD:rand(1.2,1.8),vx0,from};
+      e={kind,x,y,r:16,hp:baseHP,spd:rand(62,105)+(state.scene-1)*8,t:0,shootCD:rand(1.2,1.8),vx0,from, dmgMul};
     }else if(kind==="sweeper"){
-      e={kind,x,y,r:18,hp:cfg.baseEnemyHP+5,spd:rand(54,92),t:0,shootCD:rand(1.2,2.0),dir:Math.random()<0.5?-1:1,vx0,from};
+      e={kind,x,y,r:18,hp:baseHP+5,spd:rand(54,92),t:0,shootCD:rand(1.2,2.0),dir:Math.random()<0.5?-1:1,vx0,from, dmgMul};
     }else if(kind==="sniper"){
-      e={kind,x,y,r:17,hp:cfg.baseEnemyHP+3,spd:rand(50,86),t:0,shootCD:rand(1.7,2.6),windup:0,vx0,from};
+      e={kind,x,y,r:17,hp:baseHP+3,spd:rand(50,86),t:0,shootCD:rand(1.7,2.6),windup:0,vx0,from, dmgMul};
     }else{
-      e={kind:"bomber",x,y,r:20,hp:cfg.baseEnemyHP+8,spd:rand(48,78),t:0,shootCD:rand(1.8,2.8),vx0,from};
+      e={kind:"bomber",x,y,r:20,hp:baseHP+8,spd:rand(48,78),t:0,shootCD:rand(1.8,2.8),vx0,from, dmgMul};
     }
     enemies.push(e);
   }
 
   function bossTemplate(sceneIndex,variant=1){
     const cfg=sceneCfg[sceneIndex];
+    const base = (variant===2?(cfg.bossHP2??Math.floor(cfg.bossHP*0.75)):cfg.bossHP);
+
+    // ✅ stage scaling：後面 boss 更硬（另外保留原本 BOSS_HP_MULT）
+    const hp = Math.floor(base * BOSS_HP_MULT * stageBossHPScale(sceneIndex));
+
     return {
       scene:sceneIndex,
       x:W/2,
@@ -893,13 +906,12 @@
       variant,
       w:(variant===2?150:170),
       h:(variant===2?78:88),
-      hp:(variant===2?(cfg.bossHP2??Math.floor(cfg.bossHP*0.75)):cfg.bossHP),
-      hpMax:(variant===2?(cfg.bossHP2??Math.floor(cfg.bossHP*0.75)):cfg.bossHP),
+      hp,
+      hpMax:hp,
     };
   }
 
   function startBossFight(){
-    // ✅ boss 出現：慢動作 + 大字警告
     state.bossWarn=1.20;
     state.bossSlow=0.60;
     setMusicMode("boss");
@@ -920,7 +932,6 @@
   }
 
   function endBossFight(){
-    // ✅ 通關後恢復正常 BGM
     setMusicMode("normal");
     state.levelClear=1.35;
     state.levelClearPulse=0;
@@ -956,7 +967,7 @@
   }
 
   // =========================================================
-  // Shooting (導彈已削弱)
+  // Shooting
   // =========================================================
   function fireCooldown(base){
     return base*FIRE_RATE_MULT[player.fireRateLv];
@@ -969,12 +980,11 @@
     const lv=player.weaponLv;
     const w=weaponById[wid]||weaponById.basic;
 
-    // base cooldown per weapon
     const baseCd={
       basic:0.24,
       spread:0.22,
       laser:0.17,
-      missiles:0.24, // ✅ 導彈略慢
+      missiles:0.24,
       piercer:0.20,
       shock:0.20,
     }[wid]??0.24;
@@ -1005,12 +1015,10 @@
     }
 
     if(wid==="missiles"){
-      // ✅ 主彈保留
       bullets.push({x:player.x,y:player.y-18,vx:0,vy:-520,r:4,dmg:(6+lv),kind:"basic",color:weaponById.basic.color});
 
-      // ✅ 導彈削弱：數量↓ 追蹤↓ 傷害↓ 冷卻↑ 壽命↓
       if(player.missileCD<=0){
-        const n=(lv===1)?1:2; // Lv3 也只 2
+        const n=(lv===1)?1:2;
         for(let i=0;i<n;i++){
           bullets.push({
             x:player.x+(i-(n-1)/2)*14,
@@ -1110,8 +1118,6 @@
 
   function startDeathSequence(){
     if(state.deathSeq>0) return;
-
-    // ✅ 更爽：爆炸 + 白閃 + 強震 + 0.2 秒慢動作
     spawnExplosion(player.x,player.y,1.70);
     sfx.deathBoom();
     state.flash=1.0;
@@ -1127,14 +1133,12 @@
   function finalizeDeath(){
     player.lives--;
 
-    // 失去一命：武器重置
     player.weaponId="basic";
     player.weaponLv=1;
     player.fireRateLv=0;
     player.weaponHeat=0;
     player.missileCD=0;
 
-    // 死亡後掉落機率提升（你之前要求的機制）
     state.luck=Math.min(3.5,state.luck+0.45);
     state.dropBoost=Math.min(1.2,state.dropBoost+0.22);
 
@@ -1143,8 +1147,8 @@
 
     if(player.lives>0){
       player.hp=player.hpMax;
-      player.invuln=10.0; // ✅ 重生 10 秒無敵
-      state.shieldAnim=0; // ✅ 盾展開動畫
+      player.invuln=10.0;
+      state.shieldAnim=0;
       player.deadHidden=false;
       showToast(T().toast.lifeLost(state.luck.toFixed(2)));
     }else{
@@ -1170,14 +1174,14 @@
   }
 
   // =========================================================
-  // Focus limiter for Challenge/Hell
+  // Focus limiter
   // =========================================================
   function focusActive(dtWorld){
     const dm=diffMods();
     state.focusWarnCD=Math.max(0,state.focusWarnCD-dtWorld);
 
     if(!dm.focusLimited){
-      return focusWanted; // 入門不限時
+      return focusWanted;
     }
 
     state.focusCooldown=Math.max(0,state.focusCooldown-dtWorld);
@@ -1287,7 +1291,6 @@
     state.bossSlow=Math.max(0,state.bossSlow-dt);
     state.bossWarn=Math.max(0,state.bossWarn-dt);
 
-    // death sequence
     if(state.deathSeq>0){
       state.deathSeq=Math.max(0,state.deathSeq-dt);
       if(state.deathSeq===0) finalizeDeath();
@@ -1305,7 +1308,7 @@
 
     const dtWorldBase = dt*slowDeath*slowBoss;
     const fActive = focusActive(dtWorldBase);
-    const dtWorld = dtWorldBase*(fActive?0.18:1.0); // ✅ 精準更慢（更有感）
+    const dtWorld = dtWorldBase*(fActive?0.18:1.0);
 
     state.shake=Math.max(0,state.shake-dt*1.8);
     state.dropBoost=Math.max(0,state.dropBoost-dt*0.08);
@@ -1314,11 +1317,9 @@
       state.shieldAnim = clamp(state.shieldAnim + dt/0.55, 0, 1);
     }
 
-    // background scroll
     const bgSpeed = (state.scene===1)?210:(state.scene===2)?260:310;
     state.bgScroll = (state.bgScroll + bgSpeed*dtWorld) % 100000;
 
-    // player move
     if(state.deathSeq<=0){
       let mx=0,my=0;
       if(keys.has("ArrowLeft")||keys.has("KeyA")) mx-=1;
@@ -1342,12 +1343,14 @@
 
     if(firing && state.deathSeq<=0) shoot();
 
-    // waves -> boss
     const cfg=sceneCfg[state.scene];
     const dm=diffMods();
 
     const baseWave=(26+state.scene*4);
-    const waveDuration=baseWave*8; // ✅ 8 倍長
+
+    // ✅ 修改：第一關 boss 前長度縮短 20%
+    let waveDuration=baseWave*8;
+    if(state.scene===1) waveDuration*=0.80;
 
     if(state.phase==="wave"){
       if(state.waveStart===0) state.waveStart=state.t;
@@ -1387,7 +1390,6 @@
       }
     }
 
-    // Hell: boss fight adds (✅ 不要太密)
     if(state.phase==="boss" && difficulty===DIFF.HARD){
       state.addCD -= dtWorld;
       if(state.addCD<=0){
@@ -1529,10 +1531,13 @@
 
       let removed=false;
 
+      // 命中敵人：套用不同敵人的防禦係數（受傷倍率）
       for(let j=enemies.length-1;j>=0 && !removed;j--){
         const e=enemies[j];
         if(circleHit(blt.x,blt.y,blt.r,e.x,e.y,e.r)){
-          e.hp -= blt.dmg;
+          const dmgApplied = blt.dmg * (e.dmgMul ?? 1);
+          e.hp -= dmgApplied;
+
           if(e.hp<=0){
             tryDropFromEnemy(e.x,e.y);
             enemies.splice(j,1);
@@ -1647,14 +1652,9 @@
       if(f.t>=f.life) state.fx.splice(i,1);
     }
 
-    // HUD
+    // HUD (minimal)
     hudScene.textContent=String(state.scene);
     hudLives.textContent=String(player.lives);
-    hudHP.textContent=`${clamp(Math.ceil(player.hp),0,player.hpMax)}/${player.hpMax}`;
-    hudWeapon.textContent=`${weaponName(player.weaponId)} Lv${player.weaponLv}`;
-    hudFire.textContent=FIRE_RATE_LABEL[player.fireRateLv]||"I";
-    hudLuck.textContent=`x${(state.luck*(1+state.dropBoost)).toFixed(2)}`;
-    hudSfx.textContent=audio.enabled?(LANG==="EN"?"ON":"開"):(LANG==="EN"?"OFF":"關");
   }
 
   // =========================================================
@@ -1723,18 +1723,6 @@
       ctx.lineTo(x+120,y0+160);
       ctx.stroke();
     }
-
-    ctx.globalAlpha=0.10;
-    ctx.strokeStyle="rgba(34,211,238,1)";
-    ctx.lineWidth=3;
-    for(let i=0;i<10;i++){
-      const x=rand(0,W);
-      const y0=((s*0.85)+i*90)%(H+200)-100;
-      ctx.beginPath();
-      ctx.moveTo(x,y0);
-      ctx.lineTo(x+40,y0+220);
-      ctx.stroke();
-    }
     ctx.globalAlpha=1;
   }
 
@@ -1758,15 +1746,6 @@
       ctx.beginPath();
       ctx.ellipse(W*0.5,y,W*0.65,85,Math.sin(state.t*0.3+k)*0.2,0,Math.PI*2);
       ctx.fill();
-    }
-    ctx.globalAlpha=1;
-
-    ctx.globalAlpha=0.25;
-    ctx.fillStyle="rgba(255,255,255,1)";
-    for(let i=0;i<140;i++){
-      const x=(i*37)%W;
-      const yy=((i*71)+(s*1.55))%(H+8);
-      ctx.fillRect(x,yy,1.5,1.5);
     }
     ctx.globalAlpha=1;
   }
@@ -1797,14 +1776,11 @@
     if(player.deadHidden) return;
 
     const inv = player.invuln>0 && player.invuln<900;
-
-    // invuln flicker
     if(inv && Math.floor(state.t*18)%2===0) ctx.globalAlpha=0.78;
 
     ctx.save();
     ctx.translate(player.x,player.y);
 
-    // shield expand animation
     if(inv){
       const p=state.shieldAnim;
       const r=lerp(10,34,p);
@@ -1821,14 +1797,12 @@
       ctx.globalAlpha=1;
     }
 
-    // engine
     ctx.globalAlpha=0.45;
     ctx.fillStyle=inv?"rgba(245,158,11,1)":"rgba(34,211,238,1)";
     ctx.beginPath();
     ctx.ellipse(0,18,7,14,0,0,Math.PI*2);
     ctx.fill();
 
-    // body (invuln => gold)
     const body=ctx.createLinearGradient(-18,-18,18,18);
     if(inv){
       body.addColorStop(0,"rgba(255,215,102,1)");
@@ -1847,7 +1821,6 @@
     ctx.closePath();
     ctx.fill();
 
-    // cockpit
     ctx.fillStyle="rgba(255,255,255,0.86)";
     ctx.beginPath();
     ctx.ellipse(0,-4,6,10,0,0,Math.PI*2);
@@ -1859,7 +1832,6 @@
 
   function drawEnemies(){
     for(const e of enemies){
-      // different visuals per type
       if(e.kind==="drone"){
         ctx.fillStyle="rgba(255,255,255,0.75)";
         ctx.strokeStyle="rgba(47,91,255,0.85)";
@@ -1888,7 +1860,7 @@
         ctx.fill(); ctx.stroke();
         ctx.fillStyle="rgba(239,68,68,0.90)";
         ctx.beginPath(); ctx.arc(e.x,e.y,4,0,Math.PI*2); ctx.fill();
-      }else{ // bomber
+      }else{
         ctx.fillStyle="rgba(255,255,255,0.72)";
         ctx.strokeStyle="rgba(34,211,238,0.75)";
         ctx.lineWidth=2;
@@ -1899,12 +1871,11 @@
         ctx.fillRect(e.x-6,e.y-2,12,4);
       }
 
-      // small HP bar
       ctx.globalAlpha=0.9;
       ctx.fillStyle="rgba(0,0,0,0.18)";
       ctx.fillRect(e.x-18,e.y-e.r-10,36,4);
       ctx.fillStyle="rgba(34,211,238,0.95)";
-      const hpRatio=clamp(e.hp/(sceneCfg[state.scene].baseEnemyHP+8),0,1);
+      const hpRatio=clamp(e.hp/(sceneCfg[state.scene].baseEnemyHP*1.75+10),0,1);
       ctx.fillRect(e.x-18,e.y-e.r-10,36*hpRatio,4);
       ctx.globalAlpha=1;
     }
@@ -1912,7 +1883,6 @@
 
   function drawBosses(){
     for(const b of bosses){
-      // battleship-like boss
       ctx.save();
       ctx.translate(b.x,b.y);
 
@@ -1928,7 +1898,6 @@
         hullGrad.addColorStop(1,"rgba(34,211,238,0.92)");
       }
 
-      // main hull
       ctx.fillStyle=hullGrad;
       ctx.strokeStyle="rgba(0,0,0,0.18)";
       ctx.lineWidth=3;
@@ -1936,13 +1905,11 @@
       ctx.roundRect(-b.w/2,-b.h/2,b.w,b.h,22);
       ctx.fill(); ctx.stroke();
 
-      // bridge
       ctx.fillStyle="rgba(255,255,255,0.75)";
       ctx.beginPath();
       ctx.roundRect(-34,-b.h/2-18,68,26,14);
       ctx.fill();
 
-      // side cannons
       ctx.strokeStyle="rgba(0,0,0,0.20)";
       ctx.lineWidth=5;
       ctx.beginPath();
@@ -1952,7 +1919,6 @@
       ctx.lineTo(b.w/2+12, -18);
       ctx.stroke();
 
-      // core
       ctx.fillStyle=(b.scene===1)?"rgba(34,211,238,0.95)":(b.scene===2)?"rgba(124,92,255,0.95)":"rgba(245,203,45,0.95)";
       ctx.beginPath();
       ctx.arc(0,0,14,0,Math.PI*2);
@@ -1960,7 +1926,6 @@
 
       ctx.restore();
 
-      // boss HP bar
       const barW=240;
       const x=W/2-barW/2;
       const y=18;
@@ -2018,7 +1983,6 @@
         ctx.textAlign="center"; ctx.textBaseline="middle";
         ctx.fillText("⚡",d.x,d.y);
       }else if(d.kind==="life"){
-        // split red/gold
         ctx.save();
         ctx.beginPath(); ctx.roundRect(d.x-12,d.y-12,24,24,8); ctx.clip();
         ctx.fillStyle=LIFE_RED; ctx.fillRect(d.x-12,d.y-12,12,24);
@@ -2046,7 +2010,6 @@
     }
   }
 
-  // Dedicated HP indicator on canvas (more visible)
   function drawCanvasHP(){
     const x=16,y=H-22,w=240,h=12;
     ctx.globalAlpha=0.92;
@@ -2063,12 +2026,10 @@
     ctx.font="900 12px ui-sans-serif, system-ui";
     ctx.textAlign="left";
     ctx.textBaseline="bottom";
-    ctx.fillText(`${T().hud.hp} ${Math.ceil(player.hp)}/${player.hpMax}`, x+8, y-2);
+    ctx.fillText(`${LANG==="EN"?"HP":"血量"} ${Math.ceil(player.hp)}/${player.hpMax}`, x+8, y-2);
 
-    // lives + fire level on right
     ctx.textAlign="right";
-    ctx.fillText(`♥ x${player.lives}   ${T().hud.fire} ${FIRE_RATE_LABEL[player.fireRateLv]}`, W-16, y-2);
-
+    ctx.fillText(`♥ x${player.lives}   ${LANG==="EN"?"Fire":"射速"} ${FIRE_RATE_LABEL[player.fireRateLv]}`, W-16, y-2);
     ctx.globalAlpha=1;
   }
 
@@ -2169,12 +2130,19 @@
   applyLang();
   showStartOverlay();
 
-  // start game when press primary in start overlay
-  // (already handled in btnPrimary)
-
-  // help/hud updates
   btnResume.textContent=T().btn.resume;
   btnRestart.textContent=T().btn.restart;
 
-  // pause button hotkey in label already (P)
+  btnLang.addEventListener("click",(e)=>{
+    e.stopPropagation();
+    ensureAudio();
+    LANG = (LANG==="EN") ? "TC" : "EN";
+    localStorage.setItem(LANG_KEY,LANG);
+    applyLang();
+    if(overlay.style.display!=="none"){
+      if(!state.running) showStartOverlay();
+      else if(state.paused) openPausedOverlay();
+    }
+  });
+
 })();
