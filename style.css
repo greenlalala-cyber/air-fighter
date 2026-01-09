@@ -28,7 +28,7 @@ body{
   height: 100dvh;
 }
 
-/* ✅ 用 Grid 穩定切三區：HUD / Canvas / Controls */
+/* ✅ Grid：HUD / Canvas / Controls */
 .app{
   min-height: 100svh;
   height: 100dvh;
@@ -39,7 +39,7 @@ body{
   overflow: hidden;
 }
 
-/* HUD (two rows only) */
+/* HUD (2 rows only, compact) */
 .hud{
   border-radius: var(--r2);
   background: var(--panel);
@@ -53,12 +53,17 @@ body{
   align-items:center;
   justify-content:space-between;
   gap:10px;
-  padding:10px 12px;
+  padding: 8px 10px; /* ✅ 更緊湊 */
 }
 
 .hud-row-1{
-  padding-bottom:8px;
+  padding-bottom: 6px;
   border-bottom:1px solid var(--line);
+}
+
+.hud-row-2{
+  padding-top: 6px;
+  padding-bottom: 8px;
 }
 
 .brand{
@@ -69,21 +74,16 @@ body{
 }
 .brandName{
   font-weight: 1000;
-  font-size: 26px; /* ✅ 標題加大 */
-  letter-spacing: 0.6px;
-  line-height:1.05;
-}
-.brandSub{
-  font-size:12px;
-  color: var(--muted);
-  font-weight: 800;
+  font-size: 28px; /* ✅ 仍加大但不佔太多高度 */
+  letter-spacing: 0.4px;
+  line-height:1.02;
 }
 
 .hudStats{
   display:flex;
   align-items:center;
   gap:8px;
-  flex-wrap:wrap;
+  flex-wrap:nowrap;
   justify-content:flex-end;
 }
 
@@ -91,19 +91,17 @@ body{
   display:flex;
   align-items:baseline;
   gap:6px;
-  padding:6px 10px;
+  padding: 6px 10px;
   border-radius: 12px;
   background: var(--panel2);
   border: 1px solid rgba(0,0,0,0.08);
-  max-width: 46vw;
+  white-space:nowrap;
 }
-.stat.wide{ max-width: 56vw; }
-
 .stat .k{
   font-size:12px;
   color: var(--muted);
   font-weight: 900;
-  letter-spacing:0.3px;
+  letter-spacing:0.2px;
 }
 .stat .v{
   font-size:13px;
@@ -113,8 +111,9 @@ body{
 .hudBtns{
   display:flex;
   align-items:center;
+  justify-content:flex-end;
   gap:8px;
-  flex-shrink:0;
+  width:100%;
 }
 
 .iconBtn{
@@ -130,14 +129,14 @@ body{
 
 /* Stage */
 .stage{
-  min-height: 0; /* ✅ 關鍵：允許 canvas 縮，不擠掉 controls */
+  min-height: 0;
   display:flex;
   align-items:center;
   justify-content:center;
   position:relative;
 }
 
-/* ✅ canvas 永遠 fit 在一個螢幕內 */
+/* ✅ canvas 永遠 fit */
 #game{
   width: min(92vw, 460px);
   aspect-ratio: 9 / 16;
@@ -234,7 +233,7 @@ body{
   align-items:center;
   justify-content:space-between;
 
-  /* ✅ iPhone Safari 底列會蓋住：多補 22px */
+  /* ✅ iPhone Safari 底列遮擋保護 */
   padding-bottom: calc(12px + var(--safe-bot) + 22px);
 
   border-radius: 22px;
@@ -310,12 +309,11 @@ body{
 
 /* small screens */
 @media (max-height: 740px){
-  .brandSub{ display:none; }
-  .brandName{ font-size: 24px; }
+  .brandName{ font-size: 26px; }
   .pad{ width:110px; height:110px; }
 }
 @media (max-width: 390px){
-  .brandName{ font-size: 23px; }
+  .brandName{ font-size: 25px; }
   .iconBtn{ padding: 8px 8px; }
   .btnFire{ flex-basis: 46%; }
 }
