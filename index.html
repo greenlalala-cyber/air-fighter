@@ -2,106 +2,83 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>咻咻戰鬥機</title>
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
   <div class="app">
-    <header class="topbar">
-      <div class="brand">
-        <div class="dot"></div>
-        <div class="title">
-          <div class="name" id="brandName">咻咻戰鬥機</div>
-          <div class="sub" id="brandSub">3 幕 • 升級 • 首領</div>
+    <!-- HUD: two lines only -->
+    <header class="hud" id="hud">
+      <div class="hud-row hud-row-1">
+        <div class="brand">
+          <div class="brandName" id="brandName">咻咻戰鬥機</div>
+          <div class="brandSub" id="brandSub">3 幕 • 升級 • 首領</div>
+        </div>
+
+        <div class="hudStats">
+          <div class="stat"><span class="k" id="lblScene">場景</span><span class="v" id="hudScene">1</span></div>
+          <div class="stat"><span class="k" id="lblLives">生命</span><span class="v" id="hudLives">3</span></div>
+          <div class="stat"><span class="k" id="lblHP">血量</span><span class="v" id="hudHP">10/10</span></div>
         </div>
       </div>
 
-      <!-- Mobile 2-row HUD (3 columns):
-           Row1: Scene / Lives / HP
-           Row2: Weapon / Lang / ? -->
-      <div class="hud">
-        <div class="hudItem">
-          <span class="k" id="lblScene">場景</span>
-          <span id="hudScene" class="v">1</span>
+      <div class="hud-row hud-row-2">
+        <div class="hudStats">
+          <div class="stat wide"><span class="k" id="lblWeapon">武器</span><span class="v" id="hudWeapon">基礎 Lv1</span></div>
+          <div class="stat"><span class="k" id="lblFire">射速</span><span class="v" id="hudFire">I</span></div>
+          <div class="stat"><span class="k" id="lblLuck">幸運</span><span class="v" id="hudLuck">x1.00</span></div>
+          <div class="stat"><span class="k" id="lblSfx">音效</span><span class="v" id="hudSfx">開</span></div>
         </div>
 
-        <div class="hudItem">
-          <span class="k" id="lblLives">生命</span>
-          <span id="hudLives" class="v">3</span>
-        </div>
-
-        <div class="hudItem">
-          <span class="k" id="lblHP">血量</span>
-          <span id="hudHP" class="v">10/10</span>
-        </div>
-
-        <div class="hudItem">
-          <span class="k" id="lblWeapon">武器</span>
-          <span id="hudWeapon" class="v">基礎</span>
-        </div>
-
-        <button id="btnLang" class="hudBtn hudLang" type="button" aria-label="Language toggle">TC</button>
-        <button id="btnHelp" class="hudBtn" type="button" aria-label="Help">?</button>
-
-        <div class="hudItem hideMobile">
-          <span class="k" id="lblFire">射速</span>
-          <span id="hudFire" class="v">I</span>
-        </div>
-        <div class="hudItem hideMobile">
-          <span class="k" id="lblLuck">幸運</span>
-          <span id="hudLuck" class="v">x1.00</span>
-        </div>
-        <div class="hudItem hideMobile">
-          <span class="k" id="lblSfx">音效</span>
-          <span id="hudSfx" class="v">開</span>
+        <div class="hudBtns">
+          <button class="iconBtn" id="btnLang" title="Language">TC</button>
+          <button class="iconBtn" id="btnHelp" title="Help">?</button>
+          <button class="iconBtn" id="btnSound" title="Sound">音效/音樂：開</button>
         </div>
       </div>
     </header>
 
+    <!-- Canvas -->
     <main class="stage">
-      <div class="canvasWrap">
-        <canvas id="game" width="420" height="700" aria-label="Shooter Game Canvas"></canvas>
+      <canvas id="game" width="420" height="720" aria-label="Air Fighter"></canvas>
 
-        <div id="overlay" class="overlay">
-          <div class="panel">
-            <div class="panelTitle" id="overlayTitle">咻咻戰鬥機</div>
-            <div class="panelText" id="overlayText"></div>
+      <!-- Toast -->
+      <div class="toast" id="toast" aria-live="polite"></div>
 
-            <div class="panelBtns">
-              <button id="btnPrimary" class="btn primary">開始</button>
-              <button id="btnSound" class="btn">音效：開</button>
-            </div>
+      <!-- Overlay (start/pause/help/win) -->
+      <div class="overlay" id="overlay" style="display:none;">
+        <div class="overlayCard">
+          <div class="overlayTitle" id="overlayTitle">咻咻戰鬥機</div>
+          <div class="overlayText" id="overlayText"></div>
+          <div class="overlayTip" id="overlayTip">提示：精準模式會大幅減速，方便閃躲。</div>
 
-            <div class="panelBtns smallRow">
-              <button id="btnResume" class="btn" style="display:none;">繼續</button>
-              <button id="btnRestart" class="btn" style="display:none;">重來</button>
-            </div>
-
-            <div class="tiny" id="overlayTip">
-              提示：精準模式會大幅減速，方便閃躲。
-            </div>
+          <div class="overlayActions">
+            <button class="btn primary" id="btnPrimary">開始</button>
+            <button class="btn" id="btnResume">繼續</button>
+            <button class="btn" id="btnRestart">重來</button>
           </div>
         </div>
+      </div>
+    </main>
 
-        <div id="toast" class="toast" aria-live="polite"></div>
+    <!-- Bottom controls: FIRE (big) left, FOCUS/PAUSE middle, joystick right -->
+    <nav class="controls" aria-label="Mobile controls">
+      <button class="btnFire" id="btnFire">開火 (Space)</button>
+
+      <div class="midBtns">
+        <button class="btnMid" id="btnFocus">精準 (Shift)</button>
+        <button class="btnMid" id="btnPause">暫停 (P)</button>
       </div>
 
-      <!-- Mobile Controls (layout: FIRE left big, Focus/Pause middle, joystick right) -->
-      <div class="mobileControls" id="mobileControls">
-        <button class="btn action fireBig" id="btnFire" aria-label="Fire">開火 (Space)</button>
-
-        <div class="actionsMid">
-          <button class="btn action" id="btnFocus" aria-label="Focus">精準 (Shift)</button>
-          <button class="btn action" id="btnPause" aria-label="Pause">暫停 (P)</button>
-        </div>
-
-        <div class="pad" id="pad">
+      <div class="padWrap">
+        <div class="pad" id="pad" aria-label="Joystick">
           <div class="padRing"></div>
           <div class="padStick" id="padStick"></div>
         </div>
       </div>
-    </main>
+    </nav>
   </div>
 
   <script src="game.js"></script>
