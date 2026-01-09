@@ -18,20 +18,25 @@
 
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
+
 body{
   margin:0;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, "PingFang TC", "Noto Sans TC";
   color: var(--ink);
   background: var(--bg);
   overflow:hidden;
+  height: 100dvh;
 }
 
+/* ✅ 用 Grid 穩定切三區：HUD / Canvas / Controls */
 .app{
-  height:100%;
-  display:flex;
-  flex-direction:column;
+  min-height: 100svh;
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
   padding: calc(10px + var(--safe-top)) calc(10px + var(--safe-left)) calc(10px + var(--safe-bot)) calc(10px + var(--safe-right));
-  gap:10px;
+  gap: 10px;
+  overflow: hidden;
 }
 
 /* HUD (two rows only) */
@@ -52,7 +57,6 @@ body{
 }
 
 .hud-row-1{
-  padding-top:10px;
   padding-bottom:8px;
   border-bottom:1px solid var(--line);
 }
@@ -65,7 +69,7 @@ body{
 }
 .brandName{
   font-weight: 1000;
-  font-size: 22px; /* 加大標題 */
+  font-size: 26px; /* ✅ 標題加大 */
   letter-spacing: 0.6px;
   line-height:1.05;
 }
@@ -91,10 +95,9 @@ body{
   border-radius: 12px;
   background: var(--panel2);
   border: 1px solid rgba(0,0,0,0.08);
-  max-width: 44vw;
+  max-width: 46vw;
 }
-
-.stat.wide{ max-width: 52vw; }
+.stat.wide{ max-width: 56vw; }
 
 .stat .k{
   font-size:12px;
@@ -105,11 +108,6 @@ body{
 .stat .v{
   font-size:13px;
   font-weight: 1000;
-}
-
-.hud-row-2{
-  padding-top:8px;
-  padding-bottom:10px;
 }
 
 .hudBtns{
@@ -128,23 +126,23 @@ body{
   cursor:pointer;
   white-space:nowrap;
 }
-
 .iconBtn:active{ transform: translateY(1px); }
 
 /* Stage */
 .stage{
-  position:relative;
-  flex: 1 1 auto;
-  min-height: 0;
+  min-height: 0; /* ✅ 關鍵：允許 canvas 縮，不擠掉 controls */
   display:flex;
   align-items:center;
   justify-content:center;
+  position:relative;
 }
 
+/* ✅ canvas 永遠 fit 在一個螢幕內 */
 #game{
   width: min(92vw, 460px);
-  height: auto;
-  max-height: calc(100vh - 220px);
+  aspect-ratio: 9 / 16;
+  height: 100%;
+  max-height: 100%;
   border-radius: var(--r2);
   background: #dff3ff;
   border: 1px solid rgba(0,0,0,0.14);
@@ -169,7 +167,6 @@ body{
   transition: opacity .18s ease, transform .18s ease;
   backdrop-filter: blur(6px);
 }
-
 .toast.show{
   opacity: 1;
   transform: translateX(-50%) translateY(2px);
@@ -186,7 +183,6 @@ body{
   backdrop-filter: blur(10px);
   background: rgba(0,0,0,0.15);
 }
-
 .overlayCard{
   width: min(520px, 96vw);
   border-radius: 22px;
@@ -195,34 +191,29 @@ body{
   box-shadow: var(--shadow);
   padding: 14px;
 }
-
 .overlayTitle{
   font-size: 22px;
   font-weight: 1000;
   letter-spacing: .6px;
 }
-
 .overlayText{
   margin-top: 10px;
   font-size: 14px;
   color: rgba(0,0,0,0.74);
   line-height: 1.65;
 }
-
 .overlayTip{
   margin-top: 10px;
   font-size: 12px;
   color: rgba(0,0,0,0.58);
   font-weight: 900;
 }
-
 .overlayActions{
   display:flex;
   gap:10px;
   margin-top: 12px;
   flex-wrap:wrap;
 }
-
 .btn{
   padding: 10px 12px;
   border-radius: 14px;
@@ -242,7 +233,17 @@ body{
   gap:10px;
   align-items:center;
   justify-content:space-between;
-  padding-bottom: calc(4px + var(--safe-bot));
+
+  /* ✅ iPhone Safari 底列會蓋住：多補 22px */
+  padding-bottom: calc(12px + var(--safe-bot) + 22px);
+
+  border-radius: 22px;
+  background: rgba(255,255,255,0.55);
+  border: 1px solid rgba(0,0,0,0.10);
+  backdrop-filter: blur(10px);
+
+  position: sticky;
+  bottom: 0;
 }
 
 .btnFire{
@@ -254,7 +255,7 @@ body{
   font-weight: 1000;
   box-shadow: 0 10px 22px rgba(0,0,0,0.10);
   cursor:pointer;
-  min-height: 62px;
+  min-height: 66px;
 }
 
 .midBtns{
@@ -263,7 +264,6 @@ body{
   flex-direction:column;
   gap:8px;
 }
-
 .btnMid{
   padding: 10px 10px;
   border-radius: 18px;
@@ -271,7 +271,7 @@ body{
   background: rgba(255,255,255,0.82);
   font-weight: 1000;
   cursor:pointer;
-  min-height: 44px;
+  min-height: 46px;
 }
 
 .padWrap{
@@ -279,7 +279,6 @@ body{
   display:flex;
   justify-content:flex-end;
 }
-
 .pad{
   position:relative;
   width: 120px;
@@ -309,51 +308,14 @@ body{
   box-shadow: 0 8px 16px rgba(0,0,0,0.10);
 }
 
-/* Difficulty selector */
-.diffWrap{
-  margin-top: 10px;
-  padding: 10px 10px 10px;
-  border-radius: 16px;
-  background: rgba(255,255,255,0.55);
-  border: 1px solid rgba(0,0,0,0.10);
-}
-.diffTitle{
-  font-weight: 1000;
-  letter-spacing: 0.4px;
-  margin-bottom: 8px;
-  opacity: 0.85;
-}
-.diffRow{ display:flex; gap:8px; }
-.diffBtn{
-  flex:1;
-  padding: 10px 10px;
-  border-radius: 14px;
-  border: 1px solid rgba(0,0,0,0.14);
-  background: rgba(255,255,255,0.75);
-  font-weight: 1000;
-  cursor:pointer;
-}
-.diffBtn[data-active="1"]{
-  border-color: rgba(47,91,255,0.55);
-  box-shadow: 0 6px 18px rgba(47,91,255,0.18);
-}
-.diffDesc{
-  margin-top: 8px;
-  font-size: 12px;
-  line-height: 1.55;
-  color: rgba(0,0,0,0.66);
-  font-weight: 900;
-}
-
-/* Small screens */
+/* small screens */
 @media (max-height: 740px){
-  #game{ max-height: calc(100vh - 200px); }
   .brandSub{ display:none; }
-}
-
-@media (max-width: 390px){
-  .brandName{ font-size: 20px; }
-  .iconBtn{ padding: 8px 8px; }
+  .brandName{ font-size: 24px; }
   .pad{ width:110px; height:110px; }
+}
+@media (max-width: 390px){
+  .brandName{ font-size: 23px; }
+  .iconBtn{ padding: 8px 8px; }
   .btnFire{ flex-basis: 46%; }
 }
