@@ -488,17 +488,17 @@
 
   // ✅ 更耐打：每關基礎HP上調（沿用原值）
   const sceneCfg={
-    1:{ enemyRate:0.90, baseEnemyHP:12, bulletSpeed:145, bossHP:430, enemyFireMult:0.45, bossFireMult:0.55 },
-    2:{ enemyRate:0.72, baseEnemyHP:16, bulletSpeed:175, bossHP:650, bossHP2:520, enemyFireMult:0.65, bossFireMult:0.78 },
-    3:{ enemyRate:0.84, baseEnemyHP:20, bulletSpeed:205, bossHP:900, bossHP2:720, enemyFireMult:0.85, bossFireMult:0.96 },
+    1:{ enemyRate:0.90, baseEnemyHP:15, bulletSpeed:145, bossHP:800, enemyFireMult:0.45, bossFireMult:0.55 },
+    2:{ enemyRate:0.72, baseEnemyHP:22, bulletSpeed:175, bossHP:1200, bossHP2:820, enemyFireMult:0.65, bossFireMult:0.78 },
+    3:{ enemyRate:0.84, baseEnemyHP:30, bulletSpeed:205, bossHP:2000, bossHP2:1500, enemyFireMult:0.85, bossFireMult:0.96 },
   };
 
   // 不同敵人耐打差異：HP乘數 + 防禦係數(受傷倍率)
   const ENEMY_DURABILITY = {
     drone:  { hpMul: 1.00, dmgMul: 1.00 },
-    sniper: { hpMul: 1.18, dmgMul: 0.92 },
-    sweeper:{ hpMul: 1.42, dmgMul: 0.85 },
-    bomber: { hpMul: 1.75, dmgMul: 0.80 },
+    sniper: { hpMul: 1.50, dmgMul: 0.92 },
+    sweeper:{ hpMul: 2.00, dmgMul: 0.85 },
+    bomber: { hpMul: 2.50, dmgMul: 0.80 },
   };
 
   // Boss 血量倍率（沿用）
@@ -1346,11 +1346,14 @@
     const cfg=sceneCfg[state.scene];
     const dm=diffMods();
 
-    const baseWave=(26+state.scene*4);
+    const baseWave=(20+state.scene*4);
 
     // ✅ 修改：第一關 boss 前長度縮短 20%
-    let waveDuration=baseWave*8;
-    if(state.scene===1) waveDuration*=0.80;
+    let waveDuration;
+
+      if (state.scene === 1) waveDuration = 150;
+      else if (state.scene === 2) waveDuration = 180;
+      else waveDuration = 300;
 
     if(state.phase==="wave"){
       if(state.waveStart===0) state.waveStart=state.t;
@@ -2146,3 +2149,4 @@
   });
 
 })();
+
