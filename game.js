@@ -117,8 +117,8 @@
   };
   const sceneName=(n)=>SCENES[n]?.[LANG]||SCENES[n]?.EN||`Scene ${n}`;
 
-  const FIRE_RATE_LABEL=["I","II","III"];
-  const FIRE_RATE_MULT=[1.00,0.82,0.68];
+  const FIRE_RATE_LABEL=["I","II","III","VI","V"];
+  const FIRE_RATE_MULT=[1.00,0.85,0.72,0.60,0.50];
 
   // =========================================================
   // ✅ NEW: Stage scaling (harder per scene)
@@ -488,9 +488,9 @@
 
   // ✅ 更耐打：每關基礎HP上調（沿用原值）
   const sceneCfg={
-    1:{ enemyRate:0.90, baseEnemyHP:15, bulletSpeed:145, bossHP:800, enemyFireMult:0.45, bossFireMult:0.55 },
-    2:{ enemyRate:0.72, baseEnemyHP:22, bulletSpeed:175, bossHP:1200, bossHP2:820, enemyFireMult:0.65, bossFireMult:0.78 },
-    3:{ enemyRate:0.84, baseEnemyHP:30, bulletSpeed:205, bossHP:2000, bossHP2:1500, enemyFireMult:0.85, bossFireMult:0.96 },
+    1:{ enemyRate:0.90, baseEnemyHP:18, bulletSpeed:145, bossHP:1000, enemyFireMult:0.45, bossFireMult:0.55 },
+    2:{ enemyRate:0.72, baseEnemyHP:25, bulletSpeed:175, bossHP:1500, bossHP2:1000, enemyFireMult:0.65, bossFireMult:0.78 },
+    3:{ enemyRate:0.84, baseEnemyHP:35, bulletSpeed:205, bossHP:2500, bossHP2:2000, enemyFireMult:0.85, bossFireMult:0.96 },
   };
 
   // 不同敵人耐打差異：HP乘數 + 防禦係數(受傷倍率)
@@ -847,7 +847,7 @@
   }
 
   function upgradeFireRate(){
-    if(player.fireRateLv<2){
+    if(player.fireRateLv<4){
       player.fireRateLv++;
       showToast(T().toast.fire(FIRE_RATE_LABEL[player.fireRateLv]));
     }else{
@@ -2149,4 +2149,5 @@
   });
 
 })();
+
 
